@@ -1,8 +1,12 @@
 const postgres = require("postgres");
+const { createClient } = require("@supabase/supabase-js");
 const config = require("./index");
 
 // Initialize PostgreSQL connection using Transaction Pooler
 let sql = null;
+
+// Initialize Supabase Admin Client (for Storage & Auth Admin)
+let supabaseAdmin = null;
 
 /**
  * Get PostgreSQL client instance
@@ -26,6 +30,32 @@ const getPostgresClient = () => {
   }
 
   return sql;
+};
+
+/**
+ * Get Supabase Admin Client
+ * Used for Storage uploads and Admin Auth operations
+ */
+const getSupabaseAdmin = () => {
+  if (!supabaseAdmin) {
+    if (!config.supabase.url || !config.supabase.serviceRoleKey) {
+      console.warn("⚠️ Supabase admin credentials not configured.");
+      return null;
+    }
+
+    supabaseAdmin = createClient(
+      config.supabase.url,
+      config.supabase.serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+  }
+
+  return supabaseAdmin;
 };
 
 /**
@@ -65,6 +95,7 @@ const closeConnection = async () => {
 
 module.exports = {
   getPostgresClient,
+  getSupabaseAdmin,
   testConnection,
   closeConnection,
   // Export sql directly for convenience
