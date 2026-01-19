@@ -58,7 +58,7 @@ class ProductService {
 
     // Get Images
     const images = await sql`
-      SELECT * FROM public.product_images WHERE product_id = ${id} ORDER BY is_primary DESC, created_at ASC
+      SELECT * FROM public.product_images WHERE product_id = ${id} ORDER BY is_primary DESC, id ASC
     `;
 
     // Get Sizes (Stock)
