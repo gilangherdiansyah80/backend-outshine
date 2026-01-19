@@ -6,6 +6,7 @@ const authRoutes = require("./auth.routes");
 const userRoutes = require("./user.routes");
 const addressRoutes = require("./address.routes");
 const categoryRoutes = require("./category.routes");
+const productRoutes = require("./product.routes");
 
 // Health check routes
 router.use("/health", healthRoutes);
@@ -21,5 +22,8 @@ router.use("/addresses", addressRoutes);
 
 // Category routes
 router.use("/categories", categoryRoutes);
+
+// Product routes
+router.use("/products", productRoutes);
 
 module.exports = router;
