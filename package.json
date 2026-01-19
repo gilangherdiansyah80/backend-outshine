@@ -1,0 +1,32 @@
+{
+  "name": "backend-outshine",
+  "version": "1.0.0",
+  "description": "Express.js API backend for Outshine - deployed on Vercel with Supabase PostgreSQL",
+  "main": "api/index.js",
+  "scripts": {
+    "dev": "node api/index.js",
+    "start": "node api/index.js",
+    "vercel-dev": "vercel dev"
+  },
+  "keywords": [
+    "express",
+    "api",
+    "vercel",
+    "supabase",
+    "postgresql"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
