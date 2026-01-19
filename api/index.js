@@ -1,4 +1,5 @@
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const app = require("../src/app");
 
 const PORT = process.env.PORT || 3000;
@@ -7,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
-    console.log(`📡 API available at http://localhost:${PORT}/api`);
+    console.log(`📡 API available at http://localhost:${PORT}/api/v1`);
   });
 }
 

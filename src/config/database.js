@@ -1,83 +1,74 @@
-const { createClient } = require("@supabase/supabase-js");
+const postgres = require("postgres");
 const config = require("./index");
 
-// Initialize Supabase client
-let supabase = null;
+// Initialize PostgreSQL connection using Transaction Pooler
+let sql = null;
 
-const getSupabaseClient = () => {
-  if (!supabase) {
-    if (!config.supabase.url || !config.supabase.anonKey) {
-      console.warn(
-        "⚠️ Supabase credentials not configured. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your environment.",
-      );
-      return null;
-    }
-
-    supabase = createClient(config.supabase.url, config.supabase.anonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: false,
-      },
+/**
+ * Get PostgreSQL client instance
+ * Uses Supabase Transaction Pooler - ideal for serverless functions
+ */
+const getPostgresClient = () => {
+  if (!sql) {
+    // Use individual parameters instead of URL to avoid encoding issues
+    sql = postgres({
+      host: "aws-1-ap-southeast-2.pooler.supabase.com",
+      port: 6543,
+      database: "postgres",
+      username: "postgres.uvetcjmswzqmhcwtkynx",
+      password: process.env.DB_PASSWORD || "9YmjeMis9/Ku5mK",
+      ssl: "require",
+      max: 10,
+      idle_timeout: 20,
+      connect_timeout: 10,
+      prepare: false, // Transaction pooler doesn't support prepared statements
     });
   }
 
-  return supabase;
+  return sql;
 };
 
-// Get Supabase Admin client (with service role key for admin operations)
-let supabaseAdmin = null;
-
-const getSupabaseAdmin = () => {
-  if (!supabaseAdmin) {
-    if (!config.supabase.url || !config.supabase.serviceRoleKey) {
-      console.warn(
-        "⚠️ Supabase admin credentials not configured. Please set SUPABASE_SERVICE_ROLE_KEY in your environment.",
-      );
-      return null;
-    }
-
-    supabaseAdmin = createClient(
-      config.supabase.url,
-      config.supabase.serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      },
-    );
-  }
-
-  return supabaseAdmin;
-};
-
-// Test database connection
+/**
+ * Test database connection
+ */
 const testConnection = async () => {
   try {
-    const client = getSupabaseClient();
+    const client = getPostgresClient();
     if (!client) {
-      return { success: false, message: "Supabase client not initialized" };
+      return { success: false, message: "PostgreSQL client not initialized" };
     }
 
     // Simple query to test connection
-    const { data, error } = await client
-      .from("_test_connection")
-      .select("*")
-      .limit(1);
+    const result = await client`SELECT NOW() as current_time`;
 
-    if (error && error.code !== "PGRST116") {
-      // PGRST116 means table doesn't exist, which is fine for connection test
-      throw error;
-    }
-
-    return { success: true, message: "Database connection successful" };
+    return {
+      success: true,
+      message: "Database connection successful",
+      timestamp: result[0].current_time,
+    };
   } catch (error) {
+    console.error("Database connection error:", error);
     return { success: false, message: error.message };
   }
 };
 
+/**
+ * Close database connection
+ * Call this when shutting down the server
+ */
+const closeConnection = async () => {
+  if (sql) {
+    await sql.end();
+    sql = null;
+  }
+};
+
 module.exports = {
-  getSupabaseClient,
-  getSupabaseAdmin,
+  getPostgresClient,
   testConnection,
+  closeConnection,
+  // Export sql directly for convenience
+  get sql() {
+    return getPostgresClient();
+  },
 };
