@@ -8,6 +8,7 @@ const addressRoutes = require("./address.routes");
 const categoryRoutes = require("./category.routes");
 const productRoutes = require("./product.routes");
 const tagRoutes = require("./tag.routes");
+const discountRoutes = require("./discount.routes");
 
 // Health check routes
 router.use("/health", healthRoutes);
@@ -29,5 +30,8 @@ router.use("/products", productRoutes);
 
 // Tag routes
 router.use("/tags", tagRoutes);
+
+// Discount routes
+router.use("/discounts", discountRoutes);
 
 module.exports = router;

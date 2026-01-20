@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/product.controller");
+const discountController = require("../controllers/discount.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const multer = require("multer");
 
@@ -40,5 +41,9 @@ router.patch("/images/:id/primary", productController.setPrimaryImage);
 // Tag management
 router.post("/:id/tags", productController.addProductTag);
 router.delete("/:id/tags/:tagId", productController.removeProductTag);
+
+// Discount management
+router.get("/:id/discount", discountController.getDiscountsByProduct);
+router.post("/:id/discount", discountController.createDiscount);
 
 module.exports = router;

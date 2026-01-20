@@ -78,11 +78,22 @@ class ProductService {
       WHERE pt.product_id = ${id}
     `;
 
+    // Get Active Discount
+    const discount = await sql`
+        SELECT * FROM public.product_discounts
+        WHERE product_id = ${id}
+        AND is_active = true
+        AND (start_date IS NULL OR start_date <= now())
+        AND (end_date IS NULL OR end_date >= now())
+        LIMIT 1
+    `;
+
     return {
       ...product[0],
       images,
       sizes,
       tags,
+      discount: discount[0] || null,
     };
   }
 
