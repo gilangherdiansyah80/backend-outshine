@@ -1,0 +1,10 @@
+{
+  "profile_users": "CASCADE",
+  "user_addresses": "CASCADE",
+  "wishlists": "CASCADE",
+  "collections": "CASCADE",
+  "carts": "CASCADE",
+  "orders": "NO ACTION",
+  "product_reviews": "CASCADE",
+  "email_otps": "CASCADE"
+}

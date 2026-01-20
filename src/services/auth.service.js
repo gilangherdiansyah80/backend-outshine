@@ -76,7 +76,7 @@ class AuthService {
 
   async login(email, password) {
     const users = await sql`
-      SELECT u.id, u.email, u.password, u.role_id, r.name as role_name, p.full_name
+      SELECT u.id, u.email, u.password, u.role_id, u.is_active, r.name as role_name, p.full_name
       FROM public.users u
       LEFT JOIN public.roles r ON u.role_id = r.id
       LEFT JOIN public.profile_users p ON u.id = p.user_id

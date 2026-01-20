@@ -46,19 +46,8 @@ const updateAvatar = async (req, res) => {
   }
 };
 
-const deleteAccount = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const result = await userService.deleteAccount(userId);
-    return successResponse(res, result, "Account deleted successfully");
-  } catch (error) {
-    return errorResponse(res, error.message, 500);
-  }
-};
-
 module.exports = {
   getProfile,
   updateProfile,
   updateAvatar,
-  deleteAccount,
 };
