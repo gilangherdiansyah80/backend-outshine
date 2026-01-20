@@ -1,7 +1,7 @@
 const { sql } = require("../config/database");
 const bcrypt = require("bcryptjs");
 const { generateToken, generateRefreshToken } = require("../utils/jwt.util");
-const { sendOtpEmail } = require("../utils/mail.util");
+const { sendOtpEmail, sendResetPasswordEmail } = require("../utils/mail.util");
 const crypto = require("crypto");
 
 class AuthService {
@@ -188,6 +188,96 @@ class AuthService {
     await sendOtpEmail(email, otpCode);
 
     return { message: "Kode OTP baru telah dikirim ke email Anda." };
+  }
+
+  // Forgot Password
+  async forgotPassword(email) {
+    const users = await sql`SELECT id FROM public.users WHERE email = ${email}`;
+
+    // If no user, we still return success to prevent email enumeration
+    if (users.length === 0) {
+      return { message: "Jika email terdaftar, kode OTP akan dikirimkan." };
+    }
+
+    const userId = users[0].id;
+    const otpCode = this.generateOtp();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Invalidate old password reset OTPs for this email
+    await sql`
+      UPDATE public.password_reset_otps 
+      SET is_used = true 
+      WHERE email = ${email} AND is_used = false
+    `;
+
+    // Save new OTP
+    await sql`
+      INSERT INTO public.password_reset_otps (user_id, email, otp_code, expires_at)
+      VALUES (${userId}, ${email}, ${otpCode}, ${expiresAt})
+    `;
+
+    // Send email
+    await sendResetPasswordEmail(email, otpCode);
+
+    return { message: "Jika email terdaftar, kode OTP akan dikirimkan." };
+  }
+
+  // Verify Reset OTP
+  async verifyResetOtp(email, otpCode) {
+    const otps = await sql`
+      SELECT id, expires_at FROM public.password_reset_otps 
+      WHERE email = ${email} AND otp_code = ${otpCode} AND is_used = false
+      ORDER BY created_at DESC LIMIT 1
+    `;
+
+    if (otps.length === 0) {
+      throw new Error("Invalid or expired OTP");
+    }
+
+    const otp = otps[0];
+    if (new Date() > new Date(otp.expires_at)) {
+      throw new Error("Invalid or expired OTP");
+    }
+
+    return { message: "OTP valid. Silakan lanjutkan reset password." };
+  }
+
+  // Reset Password
+  async resetPassword(email, otpCode, newPassword) {
+    const otps = await sql`
+      SELECT id, user_id, expires_at FROM public.password_reset_otps 
+      WHERE email = ${email} AND otp_code = ${otpCode} AND is_used = false
+      ORDER BY created_at DESC LIMIT 1
+    `;
+
+    if (otps.length === 0) {
+      throw new Error("Invalid or expired OTP");
+    }
+
+    const otp = otps[0];
+    if (new Date() > new Date(otp.expires_at)) {
+      throw new Error("Invalid or expired OTP");
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update user and invalidate OTP
+    await sql.begin(async (sql) => {
+      await sql`
+        UPDATE public.users 
+        SET password = ${hashedPassword}, updated_at = NOW() 
+        WHERE id = ${otp.user_id}
+      `;
+      await sql`
+        UPDATE public.password_reset_otps 
+        SET is_used = true 
+        WHERE id = ${otp.id}
+      `;
+    });
+
+    return { message: "Password reset successfully" };
   }
 
   // Refresh token

@@ -38,6 +38,36 @@ const sendOtpEmail = async (to, otp) => {
   }
 };
 
+const sendResetPasswordEmail = async (to, otp) => {
+  const mailOptions = {
+    from: `"Outshine Support" <${config.mail.user}>`,
+    to: to,
+    subject: "Reset Password - Kode OTP Anda",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #333; text-align: center;">Lupa Password Akun Outshine</h2>
+        <p>Halo,</p>
+        <p>Kami menerima permintaan untuk mereset password akun Anda. Gunakan kode OTP di bawah ini untuk melanjutkan:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #EF4444; background: #FEE2E2; padding: 10px 20px; border-radius: 5px;">${otp}</span>
+        </div>
+        <p>Kode ini akan kadaluarsa dalam 10 menit. Jika Anda tidak merasa melakukan permintaan ini, silakan abaikan email ini.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 Outshine Store. All rights reserved.</p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Reset OTP sent to ${to}`);
+  } catch (error) {
+    console.error("Error sending reset email:", error);
+    throw new Error("Gagal mengirim email reset password");
+  }
+};
+
 module.exports = {
   sendOtpEmail,
+  sendResetPasswordEmail,
 };

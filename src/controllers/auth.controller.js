@@ -68,6 +68,56 @@ const resendOtp = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return errorResponse(res, "Email is required", 400);
+    }
+
+    const result = await authService.forgotPassword(email);
+    return successResponse(res, result, result.message);
+  } catch (error) {
+    return errorResponse(res, error.message, 400);
+  }
+};
+
+const verifyResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return errorResponse(res, "Email and OTP are required", 400);
+    }
+
+    const result = await authService.verifyResetOtp(email, otp);
+    return successResponse(res, result, result.message);
+  } catch (error) {
+    return errorResponse(res, "Invalid or expired OTP", 400);
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return errorResponse(
+        res,
+        "Email, OTP, and new password are required",
+        400,
+      );
+    }
+
+    const result = await authService.resetPassword(email, otp, newPassword);
+    return successResponse(res, result, result.message);
+  } catch (error) {
+    return errorResponse(
+      res,
+      error.message.includes("OTP") ? "Invalid or expired OTP" : error.message,
+      400,
+    );
+  }
+};
+
 const logout = async (req, res) => {
   // Since JWT is stateless, logout is mostly handled client-side by destroying the token.
   // Optionally blacklist token on server.
@@ -112,4 +162,7 @@ module.exports = {
   refreshToken,
   verifyOtp,
   resendOtp,
+  forgotPassword,
+  verifyResetOtp,
+  resetPassword,
 };
