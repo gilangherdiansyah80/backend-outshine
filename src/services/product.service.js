@@ -29,7 +29,25 @@ class ProductService {
           FROM public.product_images pi 
           WHERE pi.product_id = p.id AND pi.is_primary = true 
           LIMIT 1
-        ) as primary_image
+        ) as primary_image,
+        COALESCE(
+          (
+            SELECT json_agg(t.*)
+            FROM public.product_tags t
+            JOIN public.product_tag_items pt ON t.id = pt.tag_id
+            WHERE pt.product_id = p.id
+          ),
+          '[]'::json
+        ) as tags,
+        (
+            SELECT to_json(pd.*)
+            FROM public.product_discounts pd
+            WHERE pd.product_id = p.id
+            AND pd.is_active = true
+            AND (pd.start_date IS NULL OR pd.start_date <= now())
+            AND (pd.end_date IS NULL OR pd.end_date >= now())
+            LIMIT 1
+        ) as discount
       FROM public.products p
       LEFT JOIN public.categories c ON p.category_id = c.id
       WHERE 
