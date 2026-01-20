@@ -99,6 +99,60 @@ class ReviewService {
     return true;
   }
 
+  async updateReview(userId, reviewId, rating, comment, files = []) {
+    // Check ownership
+    const existing = await sql`
+        SELECT * FROM public.product_reviews WHERE id = ${reviewId} AND user_id = ${userId}
+      `;
+    if (existing.length === 0)
+      throw new Error("Review not found or access denied");
+    const productId = existing[0].product_id;
+
+    // Update fields
+    await sql`
+        UPDATE public.product_reviews 
+        SET 
+            rating = COALESCE(${rating}, rating),
+            comment = COALESCE(${comment}, comment),
+            updated_at = now()
+        WHERE id = ${reviewId}
+      `;
+
+    // Handle new images (Add to existing)
+    if (files && files.length > 0) {
+      const supabaseAdmin = getSupabaseAdmin();
+      if (!supabaseAdmin) throw new Error("Supabase admin not configured");
+
+      for (const file of files) {
+        const fileExt = file.originalname.split(".").pop();
+        const fileName = `reviews/${reviewId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const bucketName = "user-content";
+
+        const { error } = await supabaseAdmin.storage
+          .from(bucketName)
+          .upload(fileName, file.buffer, { contentType: file.mimetype });
+
+        if (!error) {
+          const { data } = supabaseAdmin.storage
+            .from(bucketName)
+            .getPublicUrl(fileName);
+          await sql`
+                    INSERT INTO public.product_review_images (review_id, image_url)
+                    VALUES (${reviewId}, ${data.publicUrl})
+                `;
+        }
+      }
+    }
+
+    // Update Summary
+    await this._updateRatingSummary(productId);
+
+    // Return updated review
+    const updated =
+      await sql`SELECT * FROM public.product_reviews WHERE id = ${reviewId}`;
+    return updated[0];
+  }
+
   // Internal helper to recalculate rating
   async _updateRatingSummary(productId) {
     const stats = await sql`

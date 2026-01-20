@@ -11,6 +11,7 @@ router.use(authMiddleware);
 router.post("/checkout", orderController.checkout);
 router.get("/", orderController.getUserOrders);
 router.get("/:id", orderController.getOrderById);
+router.delete("/:id", orderController.deleteOrder);
 
 // Admin Routes (should separate middleware for admin check really)
 router.get("/admin/all", orderController.getAllOrders); // Adjusted path to verify

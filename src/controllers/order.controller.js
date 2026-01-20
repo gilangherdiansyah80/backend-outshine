@@ -89,10 +89,24 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+const deleteOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    // Logic: Users can delete their own PENDING orders? Or Admin can delete any?
+    // Let's allow users to delete their own orders for now (e.g. cancelling).
+    await orderService.deleteOrder(userId, id);
+    return successResponse(res, null, "Order deleted successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   checkout,
   getUserOrders,
   getOrderById,
   getAllOrders,
   updateOrderStatus,
+  deleteOrder,
 };

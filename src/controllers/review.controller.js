@@ -54,9 +54,31 @@ const deleteReview = async (req, res) => {
   }
 };
 
+const updateReview = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params; // Review ID
+    const { rating, comment } = req.body;
+    const files = req.files;
+
+    const updatedReview = await reviewService.updateReview(
+      userId,
+      id,
+      rating,
+      comment,
+      files,
+    );
+    return successResponse(res, updatedReview, "Review updated successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   getProductReviews,
   getProductRating,
   createReview,
+  createReview,
   deleteReview,
+  updateReview,
 };

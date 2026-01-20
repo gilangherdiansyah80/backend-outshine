@@ -11,6 +11,10 @@ const upload = require("../middlewares/upload.middleware");
 
 router.use(authMiddleware);
 router.delete("/:id", reviewController.deleteReview);
-// router.put("/:id") - Update not requested code in service yet, ignoring for now based on service impl.
+router.put(
+  "/:id",
+  upload.array("images", 5), // Allow adding more images
+  reviewController.updateReview,
+);
 
 module.exports = router;
