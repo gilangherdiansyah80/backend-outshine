@@ -1,4 +1,5 @@
 const productService = require("../services/product.service");
+const tagService = require("../services/tag.service");
 const { successResponse, errorResponse } = require("../utils/response.util");
 
 const getAllProducts = async (req, res) => {
@@ -101,6 +102,35 @@ const setPrimaryImage = async (req, res) => {
   }
 };
 
+const addProductTag = async (req, res) => {
+  try {
+    const { id } = req.params; // Product ID
+    const { tagId } = req.body;
+
+    if (!tagId) return errorResponse(res, "Tag ID is required", 400);
+
+    const result = await tagService.addProductTag(id, tagId);
+    return successResponse(
+      res,
+      result,
+      "Tag associated with product successfully",
+      201,
+    );
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+const removeProductTag = async (req, res) => {
+  try {
+    const { id, tagId } = req.params;
+    await tagService.removeProductTag(id, tagId);
+    return successResponse(res, null, "Tag removed from product successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
@@ -110,4 +140,6 @@ module.exports = {
   addProductImage,
   deleteProductImage,
   setPrimaryImage,
+  addProductTag,
+  removeProductTag,
 };

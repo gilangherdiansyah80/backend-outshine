@@ -70,10 +70,19 @@ class ProductService {
       WHERE ps.product_id = ${id}
     `;
 
+    // Get Tags
+    const tags = await sql`
+      SELECT t.* 
+      FROM public.product_tags t
+      JOIN public.product_tag_items pt ON t.id = pt.tag_id
+      WHERE pt.product_id = ${id}
+    `;
+
     return {
       ...product[0],
       images,
       sizes,
+      tags,
     };
   }
 

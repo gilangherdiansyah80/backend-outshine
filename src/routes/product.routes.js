@@ -37,4 +37,8 @@ router.post(
 router.delete("/images/:id", productController.deleteProductImage);
 router.patch("/images/:id/primary", productController.setPrimaryImage);
 
+// Tag management
+router.post("/:id/tags", productController.addProductTag);
+router.delete("/:id/tags/:tagId", productController.removeProductTag);
+
 module.exports = router;
