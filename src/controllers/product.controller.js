@@ -15,7 +15,16 @@ const getAllProducts = async (req, res) => {
 const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await productService.getProductById(id);
+    // req.user might be undefined if route is public.
+    // We need to support optional auth if getting public product detail but want wishlist context?
+    // Usually standard public endpoints don't have user info unless token is passed.
+    // If the route allows optional auth, we need to handle that middleware-side or just check req.header.
+    // Assuming authMiddleware might populate req.user if present.
+    // BUT product routes for GET /:id are likely public.
+    // If we want wishlist info, frontend MUST send token even for public GET if they want that context.
+    const userId = req.user ? req.user.id : null;
+
+    const product = await productService.getProductById(id, userId);
     return successResponse(res, product, "Product retrieved successfully");
   } catch (error) {
     return errorResponse(res, error.message, 404);

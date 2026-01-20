@@ -8,10 +8,19 @@ const reviewController = require("../controllers/review.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const upload = require("../middlewares/upload.middleware");
 
+// Helper middleware for optional auth
+const optionalAuth = (req, res, next) => {
+  // If auth header exists, try running authMiddleware, else next()
+  if (req.headers.authorization) {
+    return authMiddleware(req, res, next);
+  }
+  next();
+};
+
 // Product Routes
-// Public
-router.get("/", productController.getAllProducts);
-router.get("/:id", productController.getProductById);
+// Public (with optional auth for wishlist status)
+router.get("/", productController.getAllProducts); // Maybe optional auth here too for list wishlist check? Skipping for now.
+router.get("/:id", optionalAuth, productController.getProductById);
 
 // Nested Resources (Public)
 router.get("/:id/sizes", sizeController.getSizesByProduct);

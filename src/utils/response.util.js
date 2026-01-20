@@ -1,3 +1,5 @@
+const { toCamelCase } = require("./format.util");
+
 /**
  * Standardized success response
  * @param {Response} res - Express response object
@@ -14,7 +16,7 @@ const successResponse = (
   return res.status(statusCode).json({
     success: true,
     message,
-    data,
+    data: toCamelCase(data),
   });
 };
 
@@ -34,7 +36,7 @@ const errorResponse = (
   return res.status(statusCode).json({
     success: false,
     message,
-    ...(errors && { errors }),
+    ...(errors && { errors: toCamelCase(errors) }),
   });
 };
 
@@ -49,7 +51,7 @@ const paginatedResponse = (res, data, pagination, message = "Success") => {
   return res.status(200).json({
     success: true,
     message,
-    data,
+    data: toCamelCase(data),
     pagination: {
       page: pagination.page,
       limit: pagination.limit,
