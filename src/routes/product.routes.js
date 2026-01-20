@@ -4,6 +4,7 @@ const productController = require("../controllers/product.controller");
 const discountController = require("../controllers/discount.controller");
 const sizeController = require("../controllers/size.controller");
 const sizeGuideController = require("../controllers/size-guide.controller");
+const reviewController = require("../controllers/review.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const upload = require("../middlewares/upload.middleware");
 
@@ -50,6 +51,15 @@ router.post(
   "/:id/size-guide",
   upload.single("image"),
   sizeGuideController.createSizeGuide,
+);
+
+// Review Management
+router.get("/:id/reviews", reviewController.getProductReviews);
+router.get("/:id/rating", reviewController.getProductRating);
+router.post(
+  "/:id/reviews",
+  upload.array("images", 5), // Max 5 images
+  reviewController.createReview,
 );
 
 module.exports = router;

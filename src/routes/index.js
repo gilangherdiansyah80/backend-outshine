@@ -11,6 +11,12 @@ const tagRoutes = require("./tag.routes");
 const discountRoutes = require("./discount.routes");
 const sizeRoutes = require("./size.routes");
 const sizeGuideRoutes = require("./size-guide.routes");
+const wishlistRoutes = require("./wishlist.routes");
+const collectionRoutes = require("./collection.routes");
+const reviewRoutes = require("./review.routes");
+const cartRoutes = require("./cart.routes");
+const orderRoutes = require("./order.routes");
+const paymentRoutes = require("./payment.routes");
 
 // Health check routes
 router.use("/health", healthRoutes);
@@ -37,5 +43,11 @@ router.use("/tags", tagRoutes);
 router.use("/discounts", discountRoutes);
 router.use("/sizes", sizeRoutes);
 router.use("/size-guide", sizeGuideRoutes);
+router.use("/wishlist", wishlistRoutes);
+router.use("/collections", collectionRoutes);
+router.use("/reviews", reviewRoutes);
+router.use("/cart", cartRoutes);
+router.use("/orders", orderRoutes);
+router.use("/payments", paymentRoutes);
 
 module.exports = router;
