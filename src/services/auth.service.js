@@ -1,8 +1,14 @@
 const { sql } = require("../config/database");
 const bcrypt = require("bcryptjs");
 const { generateToken, generateRefreshToken } = require("../utils/jwt.util");
+const { sendOtpEmail } = require("../utils/mail.util");
+const crypto = require("crypto");
 
 class AuthService {
+  generateOtp() {
+    return crypto.randomInt(100000, 999999).toString();
+  }
+
   async register(userData) {
     const { email, password, fullName, phone } = userData;
 
@@ -36,8 +42,8 @@ class AuthService {
 
     // Insert user
     const newUser = await sql`
-      INSERT INTO public.users (email, password, role_id)
-      VALUES (${email}, ${hashedPassword}, ${roleId})
+      INSERT INTO public.users (email, password, role_id, is_active)
+      VALUES (${email}, ${hashedPassword}, ${roleId}, false)
       RETURNING id, email, role_id
     `;
 
@@ -49,9 +55,22 @@ class AuthService {
       VALUES (${userId}, ${fullName}, ${phone})
     `;
 
+    // Generate and Send OTP
+    const otpCode = this.generateOtp();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await sql`
+      INSERT INTO public.email_otps (user_id, email, otp_code, expires_at)
+      VALUES (${userId}, ${email}, ${otpCode}, ${expiresAt})
+    `;
+
+    await sendOtpEmail(email, otpCode);
+
     return {
       id: userId,
       email: newUser[0].email,
+      message:
+        "Registrasi berhasil. Silakan cek email Anda untuk kode verifikasi.",
     };
   }
 
@@ -69,6 +88,11 @@ class AuthService {
     }
 
     const user = users[0];
+
+    if (!user.is_active) {
+      throw new Error("Akun Anda belum aktif. Silakan verifikasi email Anda.");
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -99,6 +123,71 @@ class AuthService {
   // Placeholder for logout (stateless JWT usually just client side, or blacklist)
   async logout() {
     return true;
+  }
+
+  // Verify OTP
+  async verifyOtp(email, otpCode) {
+    const otps = await sql`
+      SELECT * FROM public.email_otps 
+      WHERE email = ${email} AND otp_code = ${otpCode} AND is_used = false
+      ORDER BY created_at DESC LIMIT 1
+    `;
+
+    if (otps.length === 0) {
+      throw new Error("Kode OTP tidak valid atau sudah kadaluarsa");
+    }
+
+    const otp = otps[0];
+    if (new Date() > new Date(otp.expires_at)) {
+      throw new Error("Kode OTP sudah kadaluarsa");
+    }
+
+    // Update user and OTP
+    await sql.begin(async (sql) => {
+      await sql`
+        UPDATE public.users 
+        SET is_active = true, email_verified_at = NOW() 
+        WHERE email = ${email}
+      `;
+      await sql`
+        UPDATE public.email_otps 
+        SET is_used = true 
+        WHERE id = ${otp.id}
+      `;
+    });
+
+    return {
+      message: "Email berhasil diverifikasi. Akun Anda sekarang aktif.",
+    };
+  }
+
+  // Resend OTP
+  async resendOtp(email) {
+    const users =
+      await sql`SELECT id, is_active FROM public.users WHERE email = ${email}`;
+    if (users.length === 0) {
+      throw new Error("Email tidak terdaftar");
+    }
+
+    if (users[0].is_active) {
+      throw new Error("Akun sudah aktif");
+    }
+
+    const userId = users[0].id;
+    const otpCode = this.generateOtp();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Invalidate old OTPs for this email if any
+    await sql`UPDATE public.email_otps SET is_used = true WHERE email = ${email} AND is_used = false`;
+
+    await sql`
+      INSERT INTO public.email_otps (user_id, email, otp_code, expires_at)
+      VALUES (${userId}, ${email}, ${otpCode}, ${expiresAt})
+    `;
+
+    await sendOtpEmail(email, otpCode);
+
+    return { message: "Kode OTP baru telah dikirim ke email Anda." };
   }
 
   // Refresh token

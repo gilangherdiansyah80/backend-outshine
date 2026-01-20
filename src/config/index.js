@@ -18,6 +18,12 @@ const config = {
 
   // CORS
   corsOrigins: process.env.CORS_ORIGINS?.split(",") || ["*"],
+
+  // Mail
+  mail: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
 };
 
 module.exports = config;

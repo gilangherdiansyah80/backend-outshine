@@ -33,7 +33,38 @@ const login = async (req, res) => {
     const result = await authService.login(email, password);
     return successResponse(res, result, "Login successful");
   } catch (error) {
-    return errorResponse(res, error.message, 401);
+    const statusCode = error.message.includes("belum aktif") ? 403 : 401;
+    return errorResponse(res, error.message, statusCode);
+  }
+};
+
+const verifyOtp = async (req, res) => {
+  try {
+    const { email, otpCode } = req.body;
+
+    if (!email || !otpCode) {
+      return errorResponse(res, "Email and OTP code are required", 400);
+    }
+
+    const result = await authService.verifyOtp(email, otpCode);
+    return successResponse(res, result, "Email verified successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 400);
+  }
+};
+
+const resendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return errorResponse(res, "Email is required", 400);
+    }
+
+    const result = await authService.resendOtp(email);
+    return successResponse(res, result, "OTP resent successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 400);
   }
 };
 
@@ -79,4 +110,6 @@ module.exports = {
   login,
   logout,
   refreshToken,
+  verifyOtp,
+  resendOtp,
 };
