@@ -2,48 +2,54 @@ const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/product.controller");
 const discountController = require("../controllers/discount.controller");
+const sizeController = require("../controllers/size.controller");
+const sizeGuideController = require("../controllers/size-guide.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
-const multer = require("multer");
+const upload = require("../middlewares/upload.middleware");
 
-// Configure multer
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only images are allowed"));
-    }
-  },
-});
-
+// Product Routes
 // Public
 router.get("/", productController.getAllProducts);
 router.get("/:id", productController.getProductById);
 
-// Protected
+// Nested Resources (Public)
+router.get("/:id/sizes", sizeController.getSizesByProduct);
+router.get("/:id/size-guide", sizeGuideController.getSizeGuideByProduct); // Single/List
+
+// Protected Routes
 router.use(authMiddleware);
 
+// Product CRUD
 router.post("/", productController.createProduct);
 router.put("/:id", productController.updateProduct);
 router.delete("/:id", productController.deleteProduct);
 
-// Image management
+// Image Management
 router.post(
   "/:id/images",
   upload.single("image"),
   productController.addProductImage,
 );
-router.delete("/images/:id", productController.deleteProductImage);
-router.patch("/images/:id/primary", productController.setPrimaryImage);
+router.delete("/images/:imageId", productController.deleteProductImage);
+router.patch("/images/:imageId/primary", productController.setPrimaryImage);
 
-// Tag management
+// Tag Management
 router.post("/:id/tags", productController.addProductTag);
 router.delete("/:id/tags/:tagId", productController.removeProductTag);
 
-// Discount management
+// Discount Management
 router.get("/:id/discount", discountController.getDiscountsByProduct);
 router.post("/:id/discount", discountController.createDiscount);
+
+// Size Management
+router.post("/:id/sizes", sizeController.addProductSize);
+router.put("/:id/sizes/:sizeId", sizeController.updateProductSize);
+
+// Size Guide Management
+router.post(
+  "/:id/size-guide",
+  upload.single("image"),
+  sizeGuideController.createSizeGuide,
+);
 
 module.exports = router;

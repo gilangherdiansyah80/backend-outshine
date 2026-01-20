@@ -126,12 +126,18 @@ class ProductService {
         LIMIT 1
     `;
 
+    // Get Size Guide
+    const sizeGuide = await sql`
+      SELECT * FROM public.product_size_guides WHERE product_id = ${id} LIMIT 1
+    `;
+
     const fullProduct = {
       ...product[0],
       images,
       sizes,
       tags,
       discount: discount[0] || null,
+      sizeGuide: sizeGuide[0] || null,
     };
 
     return this._processProductRaw(fullProduct);
