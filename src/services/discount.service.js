@@ -52,14 +52,21 @@ class DiscountService {
       await sql`SELECT * FROM public.product_discounts WHERE id = ${id}`;
     if (existing.length === 0) throw new Error("Discount not found");
 
+    // Prepare update payload (mapping camelCase to snake_case)
+    const updatePayload = {};
+    if (type !== undefined) updatePayload.type = type;
+    if (value !== undefined) updatePayload.value = value;
+    if (startDate !== undefined) updatePayload.start_date = startDate;
+    if (endDate !== undefined) updatePayload.end_date = endDate;
+    if (isActive !== undefined) updatePayload.is_active = isActive;
+
+    if (Object.keys(updatePayload).length === 0) {
+      return existing[0]; // Nothing to update
+    }
+
     const updatedDiscount = await sql`
       UPDATE public.product_discounts
-      SET 
-        type = COALESCE(${type}, type),
-        value = COALESCE(${value}, value),
-        start_date = COALESCE(${startDate}, start_date),
-        end_date = COALESCE(${endDate}, end_date),
-        is_active = COALESCE(${isActive}, is_active)
+      SET ${sql(updatePayload)}
       WHERE id = ${id}
       RETURNING *
     `;
