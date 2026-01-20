@@ -23,5 +23,6 @@ router.use(authMiddleware);
 router.get("/me", userController.getProfile);
 router.put("/me", userController.updateProfile);
 router.put("/me/avatar", upload.single("avatar"), userController.updateAvatar);
+router.delete("/me", userController.deleteAccount);
 
 module.exports = router;

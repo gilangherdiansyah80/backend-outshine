@@ -107,6 +107,18 @@ class UserService {
 
     return { avatarUrl: publicUrl };
   }
+
+  async deleteAccount(userId) {
+    // Delete user (this will cascade to email_otps and other tables if configured)
+    // profile_users is usually linked to users(id) on delete cascade too,
+    // but we can delete it explicitly if not sure.
+    await sql.begin(async (sql) => {
+      await sql`DELETE FROM public.profile_users WHERE user_id = ${userId}`;
+      await sql`DELETE FROM public.users WHERE id = ${userId}`;
+    });
+
+    return { message: "Account deleted successfully" };
+  }
 }
 
 module.exports = new UserService();
