@@ -54,10 +54,17 @@ class DiscountService {
 
     // Prepare update payload (mapping camelCase to snake_case)
     const updatePayload = {};
+
+    // Support both camelCase and snake_case for dates
+    const finalStartDate =
+      startDate !== undefined ? startDate : discountData.start_date;
+    const finalEndDate =
+      endDate !== undefined ? endDate : discountData.end_date;
+
     if (type !== undefined) updatePayload.type = type;
     if (value !== undefined) updatePayload.value = value;
-    if (startDate !== undefined) updatePayload.start_date = startDate;
-    if (endDate !== undefined) updatePayload.end_date = endDate;
+    if (finalStartDate !== undefined) updatePayload.start_date = finalStartDate;
+    if (finalEndDate !== undefined) updatePayload.end_date = finalEndDate;
     if (isActive !== undefined) updatePayload.is_active = isActive;
 
     if (Object.keys(updatePayload).length === 0) {

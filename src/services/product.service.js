@@ -1,24 +1,44 @@
 const { sql, getSupabaseAdmin } = require("../config/database");
 
+const { formatCurrency } = require("../utils/format.util");
+
 class ProductService {
+  // Helper to process product with price calculations
+  _processProductRaw(product) {
+    const originalPrice = Number(product.price);
+    let discountPrice = originalPrice;
+
+    // Calculate discount if active discount exists
+    if (product.discount) {
+      const { type, value } = product.discount;
+      const numValue = Number(value);
+
+      if (type === "percent") {
+        discountPrice = originalPrice - (originalPrice * numValue) / 100;
+      } else if (type === "fixed") {
+        discountPrice = originalPrice - numValue;
+      }
+
+      // Ensure specific fields for discount price are present if user wants explicit 'discountPrice' field separated
+      // But typically we might just override price?
+      // User asked for specific fields: originalPrice, formatedOriginalPrice, discountPrice, formatedDiscoundPrice
+    }
+
+    return {
+      ...product,
+      price: originalPrice, // Ensure it's number
+      originalPrice: originalPrice,
+      formattedOriginalPrice: formatCurrency(originalPrice),
+      discountPrice: discountPrice,
+      formattedDiscountPrice: formatCurrency(discountPrice),
+    };
+  }
+
   async getAllProducts(filters = {}) {
     const { categoryId, search, limit = 20, offset = 0 } = filters;
 
     // Base query
-    // We join with product_images to get the primary image
-    // Using simple concatenation for optional where clauses because postgres.js templating is safer but tricky with dynamic columns if not careful.
-    // However, postgres.js is good at this.
-
     let products;
-
-    // Constructing query parts
-    // Note: postgres.js handles dynamic queries well.
-
-    const conditions = [];
-    if (categoryId) conditions.push("p.category_id = " + sql`${categoryId}`); // logic needs care with postgres.js
-
-    // Actually, let's use a simpler approach for now or helper.
-    // Or just raw SQL chunks.
 
     products = await sql`
       SELECT 
@@ -57,7 +77,7 @@ class ProductService {
       LIMIT ${limit} OFFSET ${offset}
     `;
 
-    return products;
+    return products.map((p) => this._processProductRaw(p));
   }
 
   async getProductById(id) {
@@ -106,13 +126,15 @@ class ProductService {
         LIMIT 1
     `;
 
-    return {
+    const fullProduct = {
       ...product[0],
       images,
       sizes,
       tags,
       discount: discount[0] || null,
     };
+
+    return this._processProductRaw(fullProduct);
   }
 
   async createProduct(productData) {
