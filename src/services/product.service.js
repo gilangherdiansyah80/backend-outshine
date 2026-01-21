@@ -63,11 +63,21 @@ class ProductService {
         totalReview: Number(product.total_reviews || 0),
       },
       createdAt: product.created_at,
+      isNew:
+        product.created_at >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      isTrending: Number(product.average_rating || 0) >= 4.5,
     };
   }
 
   async getAllProducts(filters = {}) {
-    const { categoryId, search, limit = 20, offset = 0 } = filters;
+    const {
+      categoryId,
+      search,
+      isNew,
+      isTrending,
+      limit = 20,
+      offset = 0,
+    } = filters;
 
     const products = await sql`
       SELECT 
@@ -105,6 +115,8 @@ class ProductService {
       WHERE 
         (${categoryId ? sql`p.category_id = ${categoryId}` : sql`1=1`})
         AND (${search ? sql`p.name ILIKE ${"%" + search + "%"}` : sql`1=1`})
+        AND (${isNew === "true" ? sql`p.created_at >= NOW() - INTERVAL '30 days'` : sql`1=1`})
+        AND (${isTrending === "true" ? sql`COALESCE(prs.average_rating, 0) >= 4.5` : sql`1=1`})
       ORDER BY p.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
