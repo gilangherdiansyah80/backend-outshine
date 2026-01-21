@@ -25,12 +25,17 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const userAgent = req.headers["user-agent"];
+    const ipAddress = req.ip || req.connection.remoteAddress;
 
     if (!email || !password) {
       return errorResponse(res, "Please provide email and password", 400);
     }
 
-    const result = await authService.login(email, password);
+    const result = await authService.login(email, password, {
+      userAgent,
+      ipAddress,
+    });
     return successResponse(res, result, "Login successful");
   } catch (error) {
     const statusCode = error.message.includes("belum aktif") ? 403 : 401;
@@ -119,39 +124,33 @@ const resetPassword = async (req, res) => {
 };
 
 const logout = async (req, res) => {
-  // Since JWT is stateless, logout is mostly handled client-side by destroying the token.
-  // Optionally blacklist token on server.
-  return successResponse(res, null, "Logout successful");
+  try {
+    const { refreshToken } = req.body;
+    await authService.logout(refreshToken);
+    return successResponse(res, null, "Logout successful");
+  } catch (error) {
+    return errorResponse(res, error.message, 400);
+  }
 };
 
 const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
+    const userAgent = req.headers["user-agent"];
+    const ipAddress = req.ip || req.connection.remoteAddress;
+
     if (!refreshToken) {
       return errorResponse(res, "Refresh token required", 400);
     }
 
-    const decoded = verifyToken(refreshToken);
-    if (!decoded) {
-      return errorResponse(res, "Invalid or expired refresh token", 401);
-    }
+    const result = await authService.refreshToken(refreshToken, {
+      userAgent,
+      ipAddress,
+    });
 
-    // In a real app, you might want to version tokens or check user status in DB
-    const payload = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
-    };
-
-    const newToken = generateToken(payload);
-
-    return successResponse(
-      res,
-      { token: newToken },
-      "Token refreshed successfully",
-    );
+    return successResponse(res, result, "Token refreshed successfully");
   } catch (error) {
-    return errorResponse(res, "Token refresh failed", 401);
+    return errorResponse(res, error.message, 401);
   }
 };
 

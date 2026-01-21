@@ -1,6 +1,10 @@
 const { sql } = require("../config/database");
 const bcrypt = require("bcryptjs");
-const { generateToken, generateRefreshToken } = require("../utils/jwt.util");
+const {
+  generateToken,
+  generateRefreshToken,
+  verifyToken,
+} = require("../utils/jwt.util");
 const { sendOtpEmail, sendResetPasswordEmail } = require("../utils/mail.util");
 const crypto = require("crypto");
 
@@ -74,7 +78,9 @@ class AuthService {
     };
   }
 
-  async login(email, password) {
+  async login(email, password, metadata = {}) {
+    const { userAgent, ipAddress } = metadata;
+
     const users = await sql`
       SELECT u.id, u.email, u.password, u.role_id, u.is_active, r.name as role_name, p.full_name
       FROM public.users u
@@ -105,8 +111,20 @@ class AuthService {
       role: user.role_name,
     };
 
-    const token = generateToken(payload);
+    const accessToken = generateToken(payload);
     const refreshToken = generateRefreshToken(payload);
+
+    // Set expiration for refresh token (e.g. 7 days or 30 days)
+    // Default from jwt.util.js is 7d
+    const refreshExpiresInDays = 7;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + refreshExpiresInDays);
+
+    // Store refresh token in database
+    await sql`
+      INSERT INTO public.refresh_tokens (user_id, token, user_agent, ip_address, expires_at)
+      VALUES (${user.id}, ${refreshToken}, ${userAgent}, ${ipAddress}, ${expiresAt})
+    `;
 
     return {
       user: {
@@ -115,14 +133,79 @@ class AuthService {
         fullName: user.full_name,
         role: user.role_name,
       },
-      token,
+      accessToken,
       refreshToken,
     };
   }
 
-  // Placeholder for logout (stateless JWT usually just client side, or blacklist)
-  async logout() {
+  async logout(refreshToken) {
+    if (!refreshToken) return true;
+
+    await sql`
+      UPDATE public.refresh_tokens 
+      SET is_revoked = true 
+      WHERE token = ${refreshToken}
+    `;
     return true;
+  }
+
+  async refreshToken(token, metadata = {}) {
+    const { userAgent, ipAddress } = metadata;
+
+    // 1. Check if token exists in DB and is not revoked
+    const tokens = await sql`
+      SELECT * FROM public.refresh_tokens 
+      WHERE token = ${token} AND is_revoked = false
+    `;
+
+    if (tokens.length === 0) {
+      throw new Error("Invalid or revoked refresh token");
+    }
+
+    const storedToken = tokens[0];
+
+    // 2. Check expiration
+    if (new Date() > new Date(storedToken.expires_at)) {
+      throw new Error("Refresh token expired");
+    }
+
+    // 3. Verify JWT
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      throw new Error("Invalid refresh token");
+    }
+
+    // 4. Generate new tokens
+    const payload = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+    };
+
+    const newAccessToken = generateToken(payload);
+    const newRefreshToken = generateRefreshToken(payload);
+
+    // 5. Rotate token: revoke old one, store new one
+    await sql.begin(async (sql) => {
+      await sql`
+        UPDATE public.refresh_tokens 
+        SET is_revoked = true 
+        WHERE id = ${storedToken.id}
+      `;
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // matches JWT_REFRESH_EXPIRES_IN
+
+      await sql`
+        INSERT INTO public.refresh_tokens (user_id, token, user_agent, ip_address, expires_at)
+        VALUES (${storedToken.user_id}, ${newRefreshToken}, ${userAgent}, ${ipAddress}, ${expiresAt})
+      `;
+    });
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
   }
 
   // Verify OTP
