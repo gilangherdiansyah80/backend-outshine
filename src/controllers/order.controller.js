@@ -5,10 +5,21 @@ const { successResponse, errorResponse } = require("../utils/response.util");
 const checkout = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { addressId, paymentType, productId, sizeId, quantity } = req.body;
+    const {
+      addressId,
+      paymentType,
+      productId,
+      sizeId,
+      quantity,
+      paymentMethod,
+    } = req.body;
 
-    if (!addressId || !paymentType) {
-      return errorResponse(res, "addressId and paymentType are required", 400);
+    if (!addressId || !paymentType || !paymentMethod) {
+      return errorResponse(
+        res,
+        "addressId, paymentType, and paymentMethod are required",
+        400,
+      );
     }
 
     const order = await orderService.checkout(userId, {
@@ -19,18 +30,15 @@ const checkout = async (req, res) => {
       quantity,
     });
 
-    // Auto-create payment trigger?
-    // Usually checkout returns order, then client triggers payment.
-    // Or we can generate payment link immediately.
-    // Let's generate payment link immediately for UX.
-
     const amountToPay = Number(
       order.payment_type === "dp" ? order.paid_amount : order.total_price,
     );
+
     const paymentInfo = await paymentService.createMidtransPayment(
       order.id,
       amountToPay,
       order.payment_type,
+      paymentMethod,
     );
 
     return successResponse(
