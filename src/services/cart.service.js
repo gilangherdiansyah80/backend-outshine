@@ -1,4 +1,5 @@
 const { sql } = require("../config/database");
+const { formatCurrency } = require("../utils/format.util");
 
 class CartService {
   async getCart(userId) {
@@ -59,6 +60,9 @@ class CartService {
         ...item,
         price: currentPrice,
         totalPrice: currentPrice * item.quantity,
+        formattedOriginalPrice: formatCurrency(Number(item.originalPrice)),
+        formattedPrice: formatCurrency(currentPrice),
+        formattedTotalPrice: formatCurrency(currentPrice * item.quantity),
       };
     });
 
@@ -72,6 +76,7 @@ class CartService {
       cartId,
       items: processedItems,
       totalAmount,
+      formattedTotalAmount: formatCurrency(totalAmount),
     };
   }
 
