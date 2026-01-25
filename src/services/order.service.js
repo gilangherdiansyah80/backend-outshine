@@ -45,13 +45,13 @@ class OrderService {
       }
 
       items.push({
-        product_id: productId,
-        size_id: sizeId,
+        productId: productId,
+        sizeId: sizeId,
         quantity: quantity,
         price: price,
-        total_price: price * quantity,
-        is_po: product[0].is_po,
-        po_dp_percent: product[0].po_dp_percent || 75,
+        totalPrice: price * quantity,
+        isPo: product[0].is_po,
+        poDpPercent: product[0].po_dp_percent || 75,
       });
     } else {
       // Cart Flow
@@ -64,11 +64,11 @@ class OrderService {
       // Map cart items and fetch PO details if needed
       for (const item of cart.items) {
         const product =
-          await sql`SELECT is_po, po_dp_percent FROM public.products WHERE id = ${item.product_id}`;
+          await sql`SELECT is_po, po_dp_percent FROM public.products WHERE id = ${item.productId}`;
         items.push({
           ...item,
-          is_po: product[0].is_po,
-          po_dp_percent: product[0].po_dp_percent || 75,
+          isPo: product[0].is_po,
+          poDpPercent: product[0].po_dp_percent || 75,
         });
       }
     }
@@ -82,7 +82,7 @@ class OrderService {
 
     // 3. Calculate Totals
     const totalPrice = items.reduce(
-      (sum, item) => sum + Number(item.total_price),
+      (sum, item) => sum + Number(item.totalPrice),
       0,
     );
     let paidAmount = 0;
@@ -94,11 +94,11 @@ class OrderService {
     } else if (paymentType === "dp") {
       let totalCalculatedDp = 0;
       for (const item of items) {
-        if (item.is_po) {
+        if (item.isPo) {
           totalCalculatedDp +=
-            (Number(item.total_price) * item.po_dp_percent) / 100;
+            (Number(item.totalPrice) * item.poDpPercent) / 100;
         } else {
-          totalCalculatedDp += Number(item.total_price); // Non-PO items full payment
+          totalCalculatedDp += Number(item.totalPrice); // Non-PO items full payment
         }
       }
       paidAmount = totalCalculatedDp;
@@ -121,12 +121,12 @@ class OrderService {
     for (const item of items) {
       await sql`
         INSERT INTO public.order_items (order_id, product_id, size_id, price, quantity)
-        VALUES (${orderId}, ${item.product_id}, ${item.size_id}, ${item.price}, ${item.quantity})
+        VALUES (${orderId}, ${item.productId}, ${item.sizeId}, ${item.price}, ${item.quantity})
       `;
       await sql`
         UPDATE public.product_sizes 
         SET stock = stock - ${item.quantity}
-        WHERE product_id = ${item.product_id} AND size_id = ${item.size_id}
+        WHERE product_id = ${item.productId} AND size_id = ${item.sizeId}
       `;
     }
 

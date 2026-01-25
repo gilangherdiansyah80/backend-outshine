@@ -13,33 +13,64 @@ class CartService {
     // Get Items
     const items = await sql`
         SELECT 
-            ci.*,
-            p.name as product_name,
-            p.price,
-            s.name as size_name,
+            ci.cart_id as "cartId",
+            ci.product_id as "productId",
+            ci.size_id as "sizeId",
+            ci.quantity,
+            p.name as "productName",
+            p.price as "originalPrice",
+            s.name as "sizeName",
             (
                 SELECT image_url 
                 FROM public.product_images pi 
                 WHERE pi.product_id = p.id AND pi.is_primary = true 
                 LIMIT 1
-            ) as product_image,
-            -- Calculate individual total?
-            (p.price * ci.quantity) as total_price
+            ) as "productImage",
+            (
+                SELECT to_json(pd.*)
+                FROM public.product_discounts pd
+                WHERE pd.product_id = p.id
+                AND pd.is_active = true
+                AND (pd.start_date IS NULL OR pd.start_date <= now())
+                AND (pd.end_date IS NULL OR pd.end_date >= now())
+                LIMIT 1
+            ) as active_discount
         FROM public.cart_items ci
         JOIN public.products p ON ci.product_id = p.id
         JOIN public.sizes s ON ci.size_id = s.id
         WHERE ci.cart_id = ${cartId}
     `;
 
+    // Process items to calculate discounted price
+    const processedItems = items.map((item) => {
+      let currentPrice = Number(item.originalPrice);
+      const discount = item.active_discount;
+
+      if (discount) {
+        if (discount.type === "percent") {
+          currentPrice =
+            currentPrice - (currentPrice * Number(discount.value)) / 100;
+        } else if (discount.type === "fixed") {
+          currentPrice = currentPrice - Number(discount.value);
+        }
+      }
+
+      return {
+        ...item,
+        price: currentPrice,
+        totalPrice: currentPrice * item.quantity,
+      };
+    });
+
     // Calculate cart summary
-    const totalAmount = items.reduce(
-      (sum, item) => sum + Number(item.total_price),
+    const totalAmount = processedItems.reduce(
+      (sum, item) => sum + item.totalPrice,
       0,
     );
 
     return {
       cartId,
-      items,
+      items: processedItems,
       totalAmount,
     };
   }
