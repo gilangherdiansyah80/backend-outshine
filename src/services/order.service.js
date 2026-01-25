@@ -3,15 +3,77 @@ const cartService = require("./cart.service");
 
 class OrderService {
   async checkout(userId, checkoutData) {
-    const { addressId, paymentType } = checkoutData; // paymentType: 'full', 'dp'
+    const { addressId, paymentType, productId, sizeId, quantity } =
+      checkoutData; // paymentType: 'full', 'dp'
 
-    // 1. Get Cart Items
-    const cart = await cartService.getCart(userId);
-    if (cart.items.length === 0) {
-      throw new Error("Cart is empty");
+    let items = [];
+    let cartId = null;
+
+    // 1. Get Items (either from Buy Now or from Cart)
+    if (productId) {
+      // Direct Buy Flow
+      if (!sizeId || !quantity) {
+        throw new Error("sizeId and quantity are required for Buy Now");
+      }
+
+      const product =
+        await sql`SELECT * FROM public.products WHERE id = ${productId}`;
+      if (product.length === 0) throw new Error("Product not found");
+
+      const size =
+        await sql`SELECT * FROM public.product_sizes WHERE product_id = ${productId} AND size_id = ${sizeId}`;
+      if (size.length === 0) throw new Error("Size not found for this product");
+      if (size[0].stock < quantity) throw new Error("Insufficient stock");
+
+      // Check for active discount
+      const discount = await sql`
+        SELECT * FROM public.product_discounts
+        WHERE product_id = ${productId}
+        AND is_active = true
+        AND (start_date IS NULL OR start_date <= now())
+        AND (end_date IS NULL OR end_date >= now())
+        LIMIT 1
+      `;
+
+      let price = Number(product[0].price);
+      if (discount.length > 0) {
+        if (discount[0].type === "percent") {
+          price = price - (price * Number(discount[0].value)) / 100;
+        } else if (discount[0].type === "fixed") {
+          price = price - Number(discount[0].value);
+        }
+      }
+
+      items.push({
+        product_id: productId,
+        size_id: sizeId,
+        quantity: quantity,
+        price: price,
+        total_price: price * quantity,
+        is_po: product[0].is_po,
+        po_dp_percent: product[0].po_dp_percent || 75,
+      });
+    } else {
+      // Cart Flow
+      const cart = await cartService.getCart(userId);
+      if (cart.items.length === 0) {
+        throw new Error("Cart is empty");
+      }
+      cartId = cart.cartId;
+
+      // Map cart items and fetch PO details if needed
+      for (const item of cart.items) {
+        const product =
+          await sql`SELECT is_po, po_dp_percent FROM public.products WHERE id = ${item.product_id}`;
+        items.push({
+          ...item,
+          is_po: product[0].is_po,
+          po_dp_percent: product[0].po_dp_percent || 75,
+        });
+      }
     }
 
-    // 2. Validate Address (Simple check)
+    // 2. Validate Address
     const address =
       await sql`SELECT * FROM public.user_addresses WHERE id = ${addressId} AND user_id = ${userId}`;
     if (address.length === 0) {
@@ -19,55 +81,22 @@ class OrderService {
     }
 
     // 3. Calculate Totals
-    const totalPrice = Number(cart.totalAmount);
+    const totalPrice = items.reduce(
+      (sum, item) => sum + Number(item.total_price),
+      0,
+    );
     let paidAmount = 0;
     let remainingAmount = 0;
 
     if (paymentType === "full") {
-      paidAmount = totalPrice; // Intention to pay full
+      paidAmount = totalPrice;
       remainingAmount = 0;
     } else if (paymentType === "dp") {
-      // Logic for DP? E.g. 50% or based on product rules.
-      // Schema has `po_dp_percent` in products.
-      // Simplified: Let's assume global DP rule or just 50% for now unless specified.
-      // Or maybe check if ANY item is PO?
-      // "is_po" and "po_dp_percent" are in products.
-      // Let's calculate minimum DP required.
-
-      let minDp = 0;
-      for (const item of cart.items) {
-        // fetch product PO details if not in cart view?
-        // Cart view in cart.service has p.* join? No, let's check cart service.
-        // Cart service query: JOIN public.products p ... SELECT ci.*, p.name, p.price...
-        // We need to fetch full product details to be sure about PO.
-
-        const product =
-          await sql`SELECT * FROM public.products WHERE id = ${item.product_id}`;
-        if (product[0].is_po) {
-          const percent = product[0].po_dp_percent || 50;
-          minDp += (Number(item.total_price) * percent) / 100;
-        } else {
-          minDp += Number(item.total_price); // Non-PO items full price? Or allow DP for all?
-          // Usually mixed cart is tricky. Let's assume for PO items DP is allowed.
-          // For simplicity: If paymentType is DP, we assume user pays calculated DP.
-        }
-      }
-
-      paidAmount = minDp > 0 ? minDp : totalPrice; // If no PO items, maybe full payment required?
-      // Let's stick to simplest:
-      // If user requests DP, we calculate 50% of total if logic not strict,
-      // OR better, trust the frontend/business logic?
-      // Let's use simple 50% for now for generic DP, or check max PO percent.
-      // Wait, let's use the `po_dp_percent` from product if available.
-
-      // Re-iterating over items is safest.
       let totalCalculatedDp = 0;
-      for (const item of cart.items) {
-        const product =
-          await sql`SELECT is_po, po_dp_percent FROM public.products WHERE id = ${item.product_id}`;
-        if (product[0].is_po) {
+      for (const item of items) {
+        if (item.is_po) {
           totalCalculatedDp +=
-            (Number(item.total_price) * (product[0].po_dp_percent || 50)) / 100;
+            (Number(item.total_price) * item.po_dp_percent) / 100;
         } else {
           totalCalculatedDp += Number(item.total_price); // Non-PO items full payment
         }
@@ -88,13 +117,12 @@ class OrderService {
     `;
     const orderId = newOrder[0].id;
 
-    // 5. Create Order Items
-    for (const item of cart.items) {
+    // 5. Create Order Items and Reduce Stock
+    for (const item of items) {
       await sql`
         INSERT INTO public.order_items (order_id, product_id, size_id, price, quantity)
         VALUES (${orderId}, ${item.product_id}, ${item.size_id}, ${item.price}, ${item.quantity})
       `;
-      // Reduce Stock?
       await sql`
         UPDATE public.product_sizes 
         SET stock = stock - ${item.quantity}
@@ -102,8 +130,10 @@ class OrderService {
       `;
     }
 
-    // 6. Clear Cart
-    await sql`DELETE FROM public.cart_items WHERE cart_id = ${cart.cartId}`;
+    // 6. Clear Cart if originating from cart
+    if (cartId) {
+      await sql`DELETE FROM public.cart_items WHERE cart_id = ${cartId}`;
+    }
 
     return newOrder[0];
   }

@@ -5,7 +5,7 @@ const { successResponse, errorResponse } = require("../utils/response.util");
 const checkout = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { addressId, paymentType } = req.body;
+    const { addressId, paymentType, productId, sizeId, quantity } = req.body;
 
     if (!addressId || !paymentType) {
       return errorResponse(res, "addressId and paymentType are required", 400);
@@ -14,6 +14,9 @@ const checkout = async (req, res) => {
     const order = await orderService.checkout(userId, {
       addressId,
       paymentType,
+      productId,
+      sizeId,
+      quantity,
     });
 
     // Auto-create payment trigger?
