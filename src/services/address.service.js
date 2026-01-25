@@ -4,7 +4,7 @@ class AddressService {
   async getAddresses(userId) {
     const addresses = await sql`
       SELECT * FROM public.user_addresses 
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId} AND is_active = true
       ORDER BY is_default DESC, created_at DESC
     `;
     return addresses;
@@ -13,7 +13,7 @@ class AddressService {
   async getAddressById(addressId, userId) {
     const addresses = await sql`
       SELECT * FROM public.user_addresses 
-      WHERE id = ${addressId} AND user_id = ${userId}
+      WHERE id = ${addressId} AND user_id = ${userId} AND is_active = true
     `;
 
     if (addresses.length === 0) {
@@ -90,13 +90,22 @@ class AddressService {
   }
 
   async deleteAddress(userId, addressId) {
-    // Check existence
-    await this.getAddressById(addressId, userId);
+    const address = await this.getAddressById(addressId, userId);
 
+    // Soft delete: update is_active to false
     await sql`
-      DELETE FROM public.user_addresses
+      UPDATE public.user_addresses
+      SET is_active = false, is_default = false, updated_at = now()
       WHERE id = ${addressId} AND user_id = ${userId}
     `;
+
+    // If we deleted the default address, try to set the most recent one as default
+    if (address.is_default) {
+      const remainingAddresses = await this.getAddresses(userId);
+      if (remainingAddresses.length > 0) {
+        await this.setDefaultAddress(userId, remainingAddresses[0].id);
+      }
+    }
 
     return true;
   }
