@@ -149,7 +149,8 @@ class OrderService {
             'productName', p.name,
             'sizeName', s.name,
             'quantity', oi.quantity,
-            'price', oi.price,
+            'originalPrice', p.price,
+            'discountedPrice', oi.price,
             'productImage', (
               SELECT image_url FROM public.product_images pi 
               WHERE pi.product_id = p.id AND pi.is_primary = true LIMIT 1
@@ -184,7 +185,10 @@ class OrderService {
       if (camelOrder.items) {
         camelOrder.items = camelOrder.items.map((item) => ({
           ...item,
-          formattedPrice: formatCurrency(Number(item.price)),
+          formattedOriginalPrice: formatCurrency(Number(item.originalPrice)),
+          formattedDiscountedPrice: formatCurrency(
+            Number(item.discountedPrice),
+          ),
         }));
       }
 
@@ -197,7 +201,7 @@ class OrderService {
     if (orders.length === 0) throw new Error("Order not found");
 
     const items = await sql`
-      SELECT oi.*, p.name as product_name, s.name as size_name,
+      SELECT oi.*, p.name as product_name, s.name as size_name, p.price as original_price,
       (
           SELECT image_url 
           FROM public.product_images pi 
@@ -217,7 +221,9 @@ class OrderService {
     const order = toCamelCase(orders[0]);
     const camelItems = toCamelCase(items).map((item) => ({
       ...item,
-      formattedPrice: formatCurrency(Number(item.price)),
+      discountedPrice: Number(item.price), // Renaming key for clarity in response
+      formattedOriginalPrice: formatCurrency(Number(item.originalPrice)),
+      formattedDiscountedPrice: formatCurrency(Number(item.price)),
     }));
     const latestPayment = payment.length > 0 ? toCamelCase(payment[0]) : null;
 
