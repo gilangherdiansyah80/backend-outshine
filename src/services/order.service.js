@@ -1,5 +1,6 @@
 const { sql } = require("../config/database");
 const cartService = require("./cart.service");
+const { formatCurrency, toCamelCase } = require("../utils/format.util");
 
 class OrderService {
   async checkout(userId, checkoutData) {
@@ -141,20 +142,62 @@ class OrderService {
   async getUserOrders(userId) {
     const orders = await sql`
       SELECT o.*, 
-        (SELECT count(*) FROM public.order_items WHERE order_id = o.id) as total_items
+        (SELECT count(*) FROM public.order_items WHERE order_id = o.id) as total_items,
+        (
+          SELECT json_agg(json_build_object(
+            'productId', oi.product_id,
+            'productName', p.name,
+            'sizeName', s.name,
+            'quantity', oi.quantity,
+            'price', oi.price,
+            'productImage', (
+              SELECT image_url FROM public.product_images pi 
+              WHERE pi.product_id = p.id AND pi.is_primary = true LIMIT 1
+            )
+          ))
+          FROM public.order_items oi
+          JOIN public.products p ON oi.product_id = p.id
+          JOIN public.sizes s ON oi.size_id = s.id
+          WHERE oi.order_id = o.id
+        ) as items
       FROM public.orders o
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
     `;
-    return orders;
+
+    // Process and Format
+    return orders.map((order) => {
+      const camelOrder = toCamelCase(order);
+
+      // Format amounts for Order
+      camelOrder.formattedTotalPrice = formatCurrency(
+        Number(camelOrder.totalPrice),
+      );
+      camelOrder.formattedPaidAmount = formatCurrency(
+        Number(camelOrder.paidAmount),
+      );
+      camelOrder.formattedRemainingAmount = formatCurrency(
+        Number(camelOrder.remainingAmount),
+      );
+
+      // Format amounts for each item if they exist
+      if (camelOrder.items) {
+        camelOrder.items = camelOrder.items.map((item) => ({
+          ...item,
+          formattedPrice: formatCurrency(Number(item.price)),
+        }));
+      }
+
+      return camelOrder;
+    });
   }
 
   async getOrderById(orderId) {
-    const order = await sql`SELECT * FROM public.orders WHERE id = ${orderId}`;
-    if (order.length === 0) throw new Error("Order not found");
+    const orders = await sql`SELECT * FROM public.orders WHERE id = ${orderId}`;
+    if (orders.length === 0) throw new Error("Order not found");
 
     const items = await sql`
-      SELECT oi.*, p.name as product_name, p.price as product_unit_price, s.name as size_name,
+      SELECT oi.*, p.name as product_name, s.name as size_name,
       (
           SELECT image_url 
           FROM public.product_images pi 
@@ -171,24 +214,43 @@ class OrderService {
         SELECT * FROM public.payments WHERE order_id = ${orderId} ORDER BY created_at DESC LIMIT 1
     `;
 
+    const order = toCamelCase(orders[0]);
+    const camelItems = toCamelCase(items).map((item) => ({
+      ...item,
+      formattedPrice: formatCurrency(Number(item.price)),
+    }));
+    const latestPayment = payment.length > 0 ? toCamelCase(payment[0]) : null;
+
     return {
-      ...order[0],
-      items,
-      latest_payment: payment[0] || null,
+      ...order,
+      items: camelItems,
+      latestPayment,
+      formattedTotalPrice: formatCurrency(Number(order.totalPrice)),
+      formattedPaidAmount: formatCurrency(Number(order.paidAmount)),
+      formattedRemainingAmount: formatCurrency(Number(order.remainingAmount)),
     };
   }
 
   async getAllOrders(userId) {
-    // Admin only?
-    // Check if user is admin role?
-    // For service, we assume controller handles auth.
     const orders = await sql`
         SELECT o.*, u.email as user_email
         FROM public.orders o
         JOIN public.users u ON o.user_id = u.id
         ORDER BY o.created_at DESC
     `;
-    return orders;
+    return orders.map((order) => {
+      const camelOrder = toCamelCase(order);
+      camelOrder.formattedTotalPrice = formatCurrency(
+        Number(camelOrder.totalPrice),
+      );
+      camelOrder.formattedPaidAmount = formatCurrency(
+        Number(camelOrder.paidAmount),
+      );
+      camelOrder.formattedRemainingAmount = formatCurrency(
+        Number(camelOrder.remainingAmount),
+      );
+      return camelOrder;
+    });
   }
 
   async updateOrderStatus(orderId, status) {
