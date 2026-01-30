@@ -17,7 +17,13 @@ const config = {
   databaseUrl: process.env.DATABASE_URL,
 
   // CORS
-  corsOrigins: process.env.CORS_ORIGINS?.split(",") || ["*"],
+  corsOrigins: process.env.CORS_ORIGINS
+    ? [
+        ...process.env.CORS_ORIGINS.split(","),
+        "http://localhost:3000",
+        "http://localhost:5173",
+      ]
+    : ["*"],
 
   // Mail
   mail: {
