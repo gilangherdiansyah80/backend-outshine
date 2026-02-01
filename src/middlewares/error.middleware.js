@@ -7,7 +7,13 @@ const errorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
 
-  res.status(statusCode).json({
+  res.status(statusCode);
+
+  // Ensure CORS headers are present even in errors
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Credentials", "true");
+
+  res.json({
     success: false,
     message,
     ...(process.env.NODE_ENV === "development" && {
@@ -20,6 +26,10 @@ const errorHandler = (err, req, res, next) => {
  * 404 Not Found handler
  */
 const notFoundHandler = (req, res, next) => {
+  // Ensure CORS headers are present even in 404
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Credentials", "true");
+
   res.status(404).json({
     success: false,
     message: `Route ${req.method} ${req.originalUrl} not found`,

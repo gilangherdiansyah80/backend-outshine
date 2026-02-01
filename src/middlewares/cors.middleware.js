@@ -8,12 +8,13 @@ const corsOptions = {
     }
 
     // Check if origin is in allowed list
-    if (
-      config.corsOrigins.includes("*") ||
-      config.corsOrigins.includes(origin)
-    ) {
+    const isAllowed =
+      config.corsOrigins.includes("*") || config.corsOrigins.includes(origin);
+
+    if (isAllowed) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked for origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },

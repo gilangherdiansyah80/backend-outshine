@@ -19,7 +19,7 @@ const config = {
   // CORS
   corsOrigins: process.env.CORS_ORIGINS
     ? [
-        ...process.env.CORS_ORIGINS.split(","),
+        ...process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim()),
         "http://localhost:3000",
         "http://localhost:5173",
       ]
