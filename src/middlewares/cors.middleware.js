@@ -14,7 +14,10 @@ const corsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked for origin: ${origin}`);
+      console.warn(`[CORS Blocked] Origin: ${origin}`);
+      console.warn(
+        `[CORS Blocked] Allowed List: ${config.corsOrigins.join(", ")}`,
+      );
       callback(new Error("Not allowed by CORS"));
     }
   },
