@@ -70,6 +70,14 @@ class CategoryService {
     // Check existence
     await this.getCategoryById(id);
 
+    // Unlink products associated with this category
+    await sql`
+      UPDATE public.products
+      SET category_id = NULL, updated_at = now()
+      WHERE category_id = ${id}
+    `;
+
+    // Now delete the category
     await sql`
       DELETE FROM public.categories
       WHERE id = ${id}
