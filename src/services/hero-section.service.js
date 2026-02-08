@@ -4,7 +4,7 @@ class HeroSectionService {
   async getAllHeroSections() {
     const heroSections = await sql`
       SELECT * FROM public.hero_sections 
-      ORDER BY sort_order ASC, created_at DESC
+      ORDER BY created_at DESC
     `;
     return heroSections;
   }
@@ -23,16 +23,7 @@ class HeroSectionService {
   }
 
   async createHeroSection(heroData, file) {
-    const {
-      badge_text,
-      badge_color,
-      title,
-      subtitle,
-      button_text,
-      button_link,
-      is_active,
-      sort_order,
-    } = heroData;
+    const { badge_text, title, button_text, is_active } = heroData;
 
     let backgroundImage = null;
 
@@ -49,25 +40,17 @@ class HeroSectionService {
     const newHeroSection = await sql`
       INSERT INTO public.hero_sections (
         badge_text,
-        badge_color,
         title,
-        subtitle,
         button_text,
-        button_link,
         background_image,
-        is_active,
-        sort_order
+        is_active
       )
       VALUES (
         ${badge_text || null},
-        ${badge_color || null},
         ${title},
-        ${subtitle || null},
         ${button_text},
-        ${button_link},
         ${backgroundImage},
-        ${is_active !== undefined ? is_active : true},
-        ${sort_order || 1}
+        ${is_active !== undefined ? is_active : true}
       )
       RETURNING *
     `;
@@ -89,14 +72,10 @@ class HeroSectionService {
       UPDATE public.hero_sections
       SET 
         badge_text = ${heroData.badge_text !== undefined ? heroData.badge_text : currentHero.badge_text},
-        badge_color = ${heroData.badge_color !== undefined ? heroData.badge_color : currentHero.badge_color},
         title = ${heroData.title || currentHero.title},
-        subtitle = ${heroData.subtitle !== undefined ? heroData.subtitle : currentHero.subtitle},
         button_text = ${heroData.button_text || currentHero.button_text},
-        button_link = ${heroData.button_link || currentHero.button_link},
         background_image = ${backgroundImage},
         is_active = ${heroData.is_active !== undefined ? heroData.is_active : currentHero.is_active},
-        sort_order = ${heroData.sort_order !== undefined ? heroData.sort_order : currentHero.sort_order},
         updated_at = now()
       WHERE id = ${id}
       RETURNING *
