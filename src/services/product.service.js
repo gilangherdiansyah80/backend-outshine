@@ -363,13 +363,13 @@ class ProductService {
     const updatedProduct = await sql`
       UPDATE public.products
       SET 
-        category_id = COALESCE(${categoryId}, category_id),
-        name = COALESCE(${name}, name),
-        description = COALESCE(${description}, description),
-        price = COALESCE(${price}, price),
-        is_active = COALESCE(${isActive}, is_active),
-        is_po = COALESCE(${isPo}, is_po),
-        po_dp_percent = COALESCE(${poDpPercent}, po_dp_percent),
+        category_id = COALESCE(${categoryId ?? null}, category_id),
+        name = COALESCE(${name ?? null}, name),
+        description = COALESCE(${description ?? null}, description),
+        price = COALESCE(${price ?? null}, price),
+        is_active = COALESCE(${isActive ?? null}, is_active),
+        is_po = COALESCE(${isPo ?? null}, is_po),
+        po_dp_percent = COALESCE(${poDpPercent ?? null}, po_dp_percent),
         updated_at = now()
       WHERE id = ${id}
       RETURNING *
