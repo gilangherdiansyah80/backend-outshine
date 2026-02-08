@@ -19,7 +19,14 @@ class CategoryService {
       throw new Error("Category not found");
     }
 
-    return categories[0];
+    const category = categories[0];
+
+    // Fetch products for this category
+    // Require here to handle potential circular dependency if it arises in future
+    const productService = require("./product.service");
+    category.products = await productService.getAllProducts({ categoryId: id });
+
+    return category;
   }
 
   async createCategory(categoryData, file) {
