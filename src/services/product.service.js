@@ -161,7 +161,7 @@ class ProductService {
     const reviews = await sql`
         SELECT 
            r.id, r.rating, r.comment, r.created_at,
-           pu.avatar_url as user_avatar,
+           pu.avatar_url as "userAvatar",
            json_build_object('id', u.id, 'name', COALESCE(pu.full_name, u.email)) as user,
            COALESCE(
              (
@@ -234,9 +234,12 @@ class ProductService {
       },
       reviews: {
         items: reviews.map((r) => ({
-          ...r,
+          id: r.id,
           rating: Number(r.rating),
-          userAvatar: r.user_avatar,
+          comment: r.comment,
+          createdAt: r.created_at,
+          user: r.user,
+          userAvatar: r.userAvatar,
           images: r.images,
         })),
         pagination: {
