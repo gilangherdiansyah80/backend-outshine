@@ -178,6 +178,7 @@ class ProductService {
         ORDER BY r.created_at DESC
         LIMIT 5
       `;
+    console.log("DB Reviews Result:", JSON.stringify(reviews, null, 2));
 
     // Wishlist Status
     let isWishlisted = false;
@@ -218,7 +219,7 @@ class ProductService {
         }
       : null;
 
-    return {
+    const result = {
       ...basic,
       // Overrides/Additions
       isPo: product.is_po,
@@ -268,6 +269,11 @@ class ProductService {
       createdAt: product.created_at,
       updatedAt: product.updated_at,
     };
+    console.log(
+      "Final Formatted Product (before toCamelCase):",
+      JSON.stringify(result, null, 2),
+    );
+    return result;
   }
 
   async getProductById(id, userId = null) {
