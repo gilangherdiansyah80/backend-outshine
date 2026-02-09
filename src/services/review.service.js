@@ -35,11 +35,13 @@ class ReviewService {
   async createReview(userId, productId, rating, comment, files = []) {
     // Check if user already reviewed? Typically one review per product per user?
     // Or allow multiple? Let's check existing for now to prevent spam.
+    /*
     const existing = await sql`
         SELECT * FROM public.product_reviews WHERE user_id = ${userId} AND product_id = ${productId}
      `;
     if (existing.length > 0)
       throw new Error("You have already reviewed this product");
+    */
 
     const newReview = await sql`
         INSERT INTO public.product_reviews (product_id, user_id, rating, comment)

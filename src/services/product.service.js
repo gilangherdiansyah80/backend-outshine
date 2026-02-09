@@ -178,7 +178,6 @@ class ProductService {
         ORDER BY r.created_at DESC
         LIMIT 5
       `;
-    console.log("DB Reviews Result:", JSON.stringify(reviews, null, 2));
 
     // Wishlist Status
     let isWishlisted = false;
@@ -266,13 +265,10 @@ class ProductService {
       collection: {
         canAdd: true, // Mock logic
       },
+      totalBuyers: Number(product.total_buyers || 0),
       createdAt: product.created_at,
       updatedAt: product.updated_at,
     };
-    console.log(
-      "Final Formatted Product (before toCamelCase):",
-      JSON.stringify(result, null, 2),
-    );
     return result;
   }
 
@@ -338,6 +334,14 @@ class ProductService {
     `;
     const rating = ratingStats[0] || { average_rating: 0, total_reviews: 0 };
 
+    // Get Total Buyers
+    const buyersStats = await sql`
+        SELECT COUNT(DISTINCT user_id) as total_buyers 
+        FROM public.orders o
+        JOIN public.order_items oi ON o.id = oi.order_id
+        WHERE oi.product_id = ${id} AND o.status != 'cancelled'
+    `;
+
     const fullProduct = {
       ...product[0],
       images,
@@ -348,6 +352,7 @@ class ProductService {
       specs,
       average_rating: rating.average_rating,
       total_reviews: rating.total_reviews,
+      total_buyers: buyersStats[0].total_buyers,
     };
 
     return this._formatProductDetail(fullProduct, userId);
