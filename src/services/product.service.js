@@ -66,11 +66,6 @@ class ProductService {
       isNew:
         product.created_at >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       isTrending: Number(product.average_rating || 0) >= 4.5,
-      specs: (product.specs || []).map((s) => ({
-        id: s.id,
-        key: s.key,
-        value: s.value,
-      })),
     };
   }
 
@@ -112,14 +107,6 @@ class ProductService {
             AND (pd.end_date IS NULL OR pd.end_date >= now())
             LIMIT 1
         ) as discount,
-        COALESCE(
-          (
-            SELECT json_agg(json_build_object('id', s.id, 'key', s.key, 'value', s.value))
-            FROM public.product_specs s
-            WHERE s.product_id = p.id
-          ),
-          '[]'::json
-        ) as specs,
         COALESCE(prs.average_rating, 0) as average_rating,
         COALESCE(prs.total_reviews, 0) as total_reviews
       FROM public.products p
@@ -174,7 +161,16 @@ class ProductService {
     const reviews = await sql`
         SELECT 
            r.id, r.rating, r.comment, r.created_at,
-           json_build_object('id', u.id, 'name', COALESCE(pu.full_name, u.email)) as user
+           pu.avatar_url as user_avatar,
+           json_build_object('id', u.id, 'name', COALESCE(pu.full_name, u.email)) as user,
+           COALESCE(
+             (
+               SELECT json_agg(ri.image_url)
+               FROM public.product_review_images ri
+               WHERE ri.review_id = r.id
+             ),
+             '[]'::json
+           ) as images
         FROM public.product_reviews r
         JOIN public.users u ON r.user_id = u.id
         LEFT JOIN public.profile_users pu ON u.id = pu.user_id
@@ -240,6 +236,8 @@ class ProductService {
         items: reviews.map((r) => ({
           ...r,
           rating: Number(r.rating),
+          userAvatar: r.user_avatar,
+          images: r.images,
         })),
         pagination: {
           page: 1,
