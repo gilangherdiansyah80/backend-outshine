@@ -66,6 +66,11 @@ class ProductService {
       isNew:
         product.created_at >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       isTrending: Number(product.average_rating || 0) >= 4.5,
+      specs: (product.specs || []).map((s) => ({
+        id: s.id,
+        key: s.key,
+        value: s.value,
+      })),
     };
   }
 
@@ -107,6 +112,14 @@ class ProductService {
             AND (pd.end_date IS NULL OR pd.end_date >= now())
             LIMIT 1
         ) as discount,
+        COALESCE(
+          (
+            SELECT json_agg(json_build_object('id', s.id, 'key', s.key, 'value', s.value))
+            FROM public.product_specs s
+            WHERE s.product_id = p.id
+          ),
+          '[]'::json
+        ) as specs,
         COALESCE(prs.average_rating, 0) as average_rating,
         COALESCE(prs.total_reviews, 0) as total_reviews
       FROM public.products p
