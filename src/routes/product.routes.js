@@ -5,6 +5,7 @@ const discountController = require("../controllers/discount.controller");
 const sizeController = require("../controllers/size.controller");
 const sizeGuideController = require("../controllers/size-guide.controller");
 const reviewController = require("../controllers/review.controller");
+const productSpecController = require("../controllers/product-spec.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const upload = require("../middlewares/upload.middleware");
 
@@ -25,6 +26,7 @@ router.get("/:id", optionalAuth, productController.getProductById);
 // Nested Resources (Public)
 router.get("/:id/sizes", sizeController.getSizesByProduct);
 router.get("/:id/size-guide", sizeGuideController.getSizeGuideByProduct); // Single/List
+router.get("/:id/specs", productSpecController.getSpecsByProduct);
 
 // Protected Routes
 router.use(authMiddleware);
@@ -46,6 +48,11 @@ router.patch("/images/:id/primary", productController.setPrimaryImage);
 // Tag Management
 router.post("/:id/tags", productController.addProductTag);
 router.delete("/:id/tags/:tagId", productController.removeProductTag);
+
+// Spec Management
+router.post("/:id/specs", productSpecController.createSpec);
+router.put("/specs/:id", productSpecController.updateSpec);
+router.delete("/specs/:id", productSpecController.deleteSpec);
 
 // Discount Management
 router.get("/:id/discount", discountController.getDiscountsByProduct);

@@ -240,6 +240,11 @@ class ProductService {
             description: product.sizeGuide.description,
           }
         : null,
+      specs: (product.specs || []).map((s) => ({
+        id: s.id,
+        key: s.key,
+        value: s.value,
+      })),
       wishlist: {
         isWishlisted,
       },
@@ -302,6 +307,11 @@ class ProductService {
       SELECT * FROM public.product_size_guides WHERE product_id = ${id} LIMIT 1
     `;
 
+    // Get Specs
+    const specs = await sql`
+      SELECT * FROM public.product_specs WHERE product_id = ${id} ORDER BY created_at ASC
+    `;
+
     // Get Rating Summary
     const ratingStats = await sql`
         SELECT * FROM public.product_rating_summary WHERE product_id = ${id}
@@ -315,6 +325,7 @@ class ProductService {
       tags,
       discount: discount[0] || null,
       sizeGuide: sizeGuide[0] || null,
+      specs,
       average_rating: rating.average_rating,
       total_reviews: rating.total_reviews,
     };
