@@ -40,8 +40,8 @@ router.post(
   upload.single("image"),
   productController.addProductImage,
 );
-router.delete("/images/:imageId", productController.deleteProductImage);
-router.patch("/images/:imageId/primary", productController.setPrimaryImage);
+router.delete("/images/:id", productController.deleteProductImage);
+router.patch("/images/:id/primary", productController.setPrimaryImage);
 
 // Tag Management
 router.post("/:id/tags", productController.addProductTag);
