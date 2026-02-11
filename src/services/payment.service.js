@@ -334,8 +334,7 @@ class PaymentService {
             UPDATE public.payments 
             SET 
               transaction_status = 'settlement', 
-              status = 'success',
-              verified_at = NOW() -- assuming verified_at might be useful here too or use updated_at
+              status = 'success'
             WHERE id = ${proof.payment_id}
             RETURNING *
         `;
