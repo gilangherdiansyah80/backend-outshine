@@ -23,9 +23,8 @@ class PaymentMethodService {
     const { code, name, accountNumber, accountHolder, instructions, isActive } =
       data;
 
-    const instructionsJson = Array.isArray(instructions)
-      ? JSON.stringify(instructions)
-      : instructions;
+    // Pass instructions directly (postgres library handles objects/arrays for jsonb columns)
+    const instructionsJson = instructions;
 
     const newMethod = await sql`
         INSERT INTO public.payment_methods (code, name, account_number, account_holder, instructions, is_active)
