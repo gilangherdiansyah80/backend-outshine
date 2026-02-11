@@ -3,13 +3,13 @@ const { sql } = require("../config/database");
 class PaymentMethodService {
   async getAllMethods() {
     const methods =
-      await sql`SELECT id, code, name FROM public.payment_methods ORDER BY created_at DESC`;
+      await sql`SELECT * FROM public.payment_methods ORDER BY created_at DESC`;
     return methods;
   }
 
   async getActiveMethods() {
     const methods =
-      await sql`SELECT id, code, name FROM public.payment_methods WHERE is_active = true ORDER BY name ASC`;
+      await sql`SELECT * FROM public.payment_methods WHERE is_active = true ORDER BY name ASC`;
     return methods;
   }
 
