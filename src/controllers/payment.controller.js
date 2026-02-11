@@ -60,6 +60,9 @@ const uploadPaymentProof = async (req, res) => {
     const { orderId, paymentId, note } = req.body;
     const file = req.file;
 
+    // Default note to null if undefined to avoid SQL error
+    const noteValue = note || null;
+
     if (!file) {
       return errorResponse(res, "Payment proof image is required", 400);
     }
@@ -68,7 +71,7 @@ const uploadPaymentProof = async (req, res) => {
       orderId,
       paymentId,
       file,
-      note,
+      noteValue,
     );
 
     // Return proof AND groupLink explicitly if needed by frontend
