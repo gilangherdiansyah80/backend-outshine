@@ -1,6 +1,5 @@
-const { sql } = require("../config/database");
+const { sql, getSupabaseAdmin } = require("../config/database");
 const midtransClient = require("midtrans-client");
-const { getSupabaseAdmin } = require("../config/supabase");
 
 // Initialize CoreApi
 const coreApi = new midtransClient.CoreApi({
