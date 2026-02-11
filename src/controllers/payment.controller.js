@@ -38,11 +38,12 @@ const getPaymentsByOrder = async (req, res) => {
 
 const createManualPayment = async (req, res) => {
   try {
-    const { orderId, amount, paymentType } = req.body;
+    const { orderId, amount, paymentType, bank } = req.body;
     const paymentInfo = await paymentService.createManualPayment(
       orderId,
       amount,
       paymentType,
+      bank,
     );
     return successResponse(
       res,

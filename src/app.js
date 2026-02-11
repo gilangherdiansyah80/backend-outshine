@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const routes = require("./routes");
+const paymentMethodRoutes = require("./routes/payment-method.routes");
 const {
   errorHandler,
   notFoundHandler,
@@ -19,6 +20,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.use("/api/v1", routes);
+app.use("/api/v1/payment-methods", paymentMethodRoutes);
+// app.use("/api/v1/settings", settingsRoutes); // If we implement settings later
 
 // Root route
 app.get("/", (req, res) => {

@@ -158,25 +158,81 @@ class PaymentService {
   }
 
   // Manual Payment
-  async createManualPayment(orderId, amount, paymentType) {
-    // 1. Create Pending Payment Record
-    const newPayment = await sql`
-        INSERT INTO public.payments (order_id, provider, payment_type, status, amount, bank)
-        VALUES (${orderId}, 'manual', ${paymentType}, 'pending', ${amount}, 'bca')
-        RETURNING *
-     `;
+  async createManualPayment(orderId, amount, paymentType, bank) {
+    // 0. Auto-detect amount and paymentType and bank if missing
+    // Try to get from order first if possible (though check_orders didn't show bank column clearly, assuming user sends it or we default)
+    // Actually, user wants BNI. So let's allow `bank` param.
 
-    // 2. Return Bank Details (Static for now, can be from DB later)
-    return {
-      paymentId: newPayment[0].id,
-      amount: amount,
-      bank: {
+    if (!amount || !paymentType) {
+      const order =
+        await sql`SELECT total_price, remaining_amount, payment_type FROM public.orders WHERE id = ${orderId}`;
+      if (order.length === 0) throw new Error("Order not found");
+
+      const ord = order[0];
+
+      if (!paymentType) paymentType = ord.payment_type;
+
+      if (!amount) {
+        if (paymentType === "full") {
+          amount = ord.total_price;
+        } else if (paymentType === "dp") {
+          // Fallback to full price if logic is complex, or maybe 50%?
+          // Let's stick to total_price for safety or user input is required for partial.
+          // Ideally user inputs amount for manual transfer, but if they don't, we assume full.
+          amount = ord.total_price;
+        }
+      }
+    }
+
+    // Default bank to BCA if not provided (or handle errors)
+    const selectedBank = bank ? bank.toLowerCase() : "bca";
+
+    // Fetch Bank Details from DB
+    const bankData = await sql`
+        SELECT * FROM public.payment_methods 
+        WHERE code = ${selectedBank} 
+        AND is_active = true
+    `;
+
+    let accountInfo;
+    let instructions = [];
+
+    if (bankData.length > 0) {
+      accountInfo = {
+        name: bankData[0].name,
+        accountNumber: bankData[0].account_number,
+        accountHolder: bankData[0].account_holder,
+      };
+      instructions = bankData[0].instructions || [];
+    } else {
+      // Fallback if not found in DB (e.g. migration lag)
+      accountInfo = {
         name: "BCA",
         accountNumber: "1234567890",
         accountHolder: "Outshine Official",
-      },
-      instruction:
-        "Silahkan transfer ke rekening di atas dan upload bukti pembayaran.",
+      };
+      instructions = ["Silahkan transfer ke rekening tersebut."];
+    }
+
+    // Calculate Expiry (24 Hours)
+    const expiredAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // 1. Create Pending Payment Record
+    const newPayment = await sql`
+        INSERT INTO public.payments (order_id, provider, payment_type, status, amount, bank, expired_at)
+        VALUES (${orderId}, 'manual', ${paymentType}, 'pending', ${amount}, ${selectedBank}, ${expiredAt})
+        RETURNING *
+     `;
+
+    // 2. Return Payment Details
+    return {
+      paymentId: newPayment[0].id,
+      transactionId: newPayment[0].id, // Alias for frontend consistency
+      orderId: orderId,
+      amount: amount,
+      expiredAt: expiredAt,
+      bank: accountInfo,
+      instructions: instructions,
     };
   }
 
