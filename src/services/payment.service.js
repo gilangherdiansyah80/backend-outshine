@@ -312,6 +312,55 @@ class PaymentService {
   async getPaymentByOrder(orderId) {
     return await sql`SELECT * FROM public.payments WHERE order_id = ${orderId}`;
   }
+
+  async verifyPaymentProof(proofId, status) {
+    // 1. Get current proof
+    const proofs =
+      await sql`SELECT * FROM public.manual_payment_proofs WHERE id = ${proofId}`;
+    if (proofs.length === 0) throw new Error("Payment proof not found");
+
+    const proof = proofs[0];
+
+    if (status === "approved") {
+      // 2. Update Proof status
+      await sql`
+            UPDATE public.manual_payment_proofs 
+            SET status = 'approved', verified_at = NOW() 
+            WHERE id = ${proofId}
+        `;
+
+      // 3. Update Payment record
+      const updatedPayment = await sql`
+            UPDATE public.payments 
+            SET 
+              transaction_status = 'settlement', 
+              status = 'success',
+              verified_at = NOW() -- assuming verified_at might be useful here too or use updated_at
+            WHERE id = ${proof.payment_id}
+            RETURNING *
+        `;
+
+      // 4. Update Order status to processing
+      if (updatedPayment.length > 0) {
+        await sql`
+                UPDATE public.orders 
+                SET status = 'processing' 
+                WHERE id = ${proof.order_id}
+            `;
+      }
+
+      return { status: "approved", message: "Payment verified successfully" };
+    } else if (status === "rejected") {
+      await sql`
+            UPDATE public.manual_payment_proofs 
+            SET status = 'rejected', verified_at = NOW() 
+            WHERE id = ${proofId}
+        `;
+      return { status: "rejected", message: "Payment rejected" };
+    } else {
+      throw new Error("Invalid status. Must be 'approved' or 'rejected'");
+    }
+  }
 }
 
 module.exports = new PaymentService();

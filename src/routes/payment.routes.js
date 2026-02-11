@@ -16,7 +16,7 @@ router.post(
   upload.single("proof"),
   paymentController.uploadPaymentProof,
 );
-router.get("/:orderId/group-link", paymentController.getOrderGroupLink);
 router.get("/:orderId", paymentController.getPaymentsByOrder);
+router.patch("/proofs/:id/verify", paymentController.verifyPaymentProof);
 
 module.exports = router;

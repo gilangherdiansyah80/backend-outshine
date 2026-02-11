@@ -102,6 +102,20 @@ const getOrderGroupLink = async (req, res) => {
   }
 };
 
+const verifyPaymentProof = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'approved' or 'rejected'
+
+    if (!status) return errorResponse(res, "Status is required", 400);
+
+    const result = await paymentService.verifyPaymentProof(id, status);
+    return successResponse(res, result, "Manual payment verification updated");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   createMidtransPayment,
   handleWebhook,
@@ -109,4 +123,5 @@ module.exports = {
   createManualPayment,
   uploadPaymentProof,
   getOrderGroupLink,
+  verifyPaymentProof,
 };
