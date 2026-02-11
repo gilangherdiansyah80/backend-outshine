@@ -286,16 +286,8 @@ class PaymentService {
         link: pl.join_link,
       }));
 
-      // Use the first one for the main order_groups (legacy support)
+      // Use the first one for the main groupLink (legacy support)
       groupLink = productLinks[0].join_link;
-
-      // Upsert into order_groups
-      await sql`
-            INSERT INTO public.order_groups (order_id, join_link, is_active)
-            VALUES (${orderId}, ${groupLink}, true)
-            ON CONFLICT (order_id) 
-            DO UPDATE SET join_link = ${groupLink}, is_active = true
-        `;
     }
 
     return {
@@ -306,9 +298,15 @@ class PaymentService {
   }
 
   async getOrderGroupLink(orderId) {
-    const group =
-      await sql`SELECT * FROM public.order_groups WHERE order_id = ${orderId} AND is_active = true`;
-    return group.length > 0 ? group[0].join_link : null;
+    const links = await sql`
+        SELECT pg.join_link
+        FROM public.order_items oi
+        JOIN public.product_groups pg ON oi.product_id = pg.product_id
+        WHERE oi.order_id = ${orderId}
+        AND pg.is_active = true
+        LIMIT 1
+    `;
+    return links.length > 0 ? links[0].join_link : null;
   }
 
   async getPaymentByOrder(orderId) {
