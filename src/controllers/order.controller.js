@@ -12,6 +12,7 @@ const checkout = async (req, res) => {
       sizeId,
       quantity,
       paymentMethod,
+      paymentProvider = "midtrans", // Default to midtrans if not specified
     } = req.body;
 
     if (!addressId || !paymentType || !paymentMethod) {
@@ -34,12 +35,22 @@ const checkout = async (req, res) => {
       order.payment_type === "dp" ? order.paid_amount : order.total_price,
     );
 
-    const paymentInfo = await paymentService.createMidtransPayment(
-      order.id,
-      amountToPay,
-      order.payment_type,
-      paymentMethod,
-    );
+    let paymentInfo;
+    if (paymentProvider.toLowerCase() === "manual") {
+      paymentInfo = await paymentService.createManualPayment(
+        order.id,
+        amountToPay,
+        order.payment_type,
+        paymentMethod,
+      );
+    } else {
+      paymentInfo = await paymentService.createMidtransPayment(
+        order.id,
+        amountToPay,
+        order.payment_type,
+        paymentMethod,
+      );
+    }
 
     return successResponse(
       res,
