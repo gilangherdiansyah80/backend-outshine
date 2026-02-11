@@ -32,9 +32,10 @@ router.get("/:id/specs", productSpecController.getSpecsByProduct);
 router.use(authMiddleware);
 
 // Product CRUD
-router.post("/", productController.createProduct);
-router.put("/:id", productController.updateProduct);
+router.post("/", upload.array("images", 5), productController.createProduct);
+router.put("/:id", upload.array("images", 5), productController.updateProduct);
 router.delete("/:id", productController.deleteProduct);
+router.post("/:id/group-link", productController.upsertGroupLink);
 
 // Image Management
 router.post(

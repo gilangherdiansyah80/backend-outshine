@@ -140,6 +140,22 @@ const removeProductTag = async (req, res) => {
   }
 };
 
+const upsertGroupLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { link } = req.body;
+
+    if (!link) {
+      return errorResponse(res, "Link is required", 400);
+    }
+
+    const group = await productService.upsertGroupLink(id, link);
+    return successResponse(res, group, "Product group link updated");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
@@ -151,4 +167,5 @@ module.exports = {
   setPrimaryImage,
   addProductTag,
   removeProductTag,
+  upsertGroupLink,
 };

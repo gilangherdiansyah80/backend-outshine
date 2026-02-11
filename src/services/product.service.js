@@ -508,6 +508,16 @@ class ProductService {
 
     return true;
   }
+  async upsertGroupLink(productId, link) {
+    const group = await sql`
+        INSERT INTO public.product_groups (product_id, join_link, is_active)
+        VALUES (${productId}, ${link}, true)
+        ON CONFLICT (product_id) 
+        DO UPDATE SET join_link = ${link}, is_active = true
+        RETURNING *
+    `;
+    return group[0];
+  }
 }
 
 module.exports = new ProductService();

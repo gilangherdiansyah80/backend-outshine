@@ -36,8 +36,73 @@ const getPaymentsByOrder = async (req, res) => {
   }
 };
 
+const createManualPayment = async (req, res) => {
+  try {
+    const { orderId, amount, paymentType } = req.body;
+    const paymentInfo = await paymentService.createManualPayment(
+      orderId,
+      amount,
+      paymentType,
+    );
+    return successResponse(
+      res,
+      paymentInfo,
+      "Manual payment initiated. Please transfer to the provided account.",
+    );
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+const uploadPaymentProof = async (req, res) => {
+  try {
+    const { orderId, paymentId, note } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return errorResponse(res, "Payment proof image is required", 400);
+    }
+
+    const proof = await paymentService.uploadPaymentProof(
+      orderId,
+      paymentId,
+      file,
+      note,
+    );
+
+    // Return proof AND groupLink explicitly if needed by frontend
+    // service already returns object with groupLink
+    return successResponse(res, proof, "Payment proof uploaded successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+const getOrderGroupLink = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    // Verify order ownership/payment status if necessary?
+    // For now, public/auth protected.
+
+    const link = await paymentService.getOrderGroupLink(orderId);
+    if (!link) {
+      return errorResponse(
+        res,
+        "Group link not found or Order not eligible yet",
+        404,
+      );
+    }
+    return successResponse(res, { link }, "Group link retrieved");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   createMidtransPayment,
   handleWebhook,
   getPaymentsByOrder,
+  createManualPayment,
+  uploadPaymentProof,
+  getOrderGroupLink,
 };

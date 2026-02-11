@@ -157,6 +157,104 @@ class PaymentService {
     }
   }
 
+  // Manual Payment
+  async createManualPayment(orderId, amount, paymentType) {
+    // 1. Create Pending Payment Record
+    const newPayment = await sql`
+        INSERT INTO public.payments (order_id, provider, payment_type, status, amount, bank)
+        VALUES (${orderId}, 'manual', ${paymentType}, 'pending', ${amount}, 'bca')
+        RETURNING *
+     `;
+
+    // 2. Return Bank Details (Static for now, can be from DB later)
+    return {
+      paymentId: newPayment[0].id,
+      amount: amount,
+      bank: {
+        name: "BCA",
+        accountNumber: "1234567890",
+        accountHolder: "Outshine Official",
+      },
+      instruction:
+        "Silahkan transfer ke rekening di atas dan upload bukti pembayaran.",
+    };
+  }
+
+  async uploadPaymentProof(orderId, paymentId, file, note) {
+    const supabaseAdmin = getSupabaseAdmin();
+    if (!supabaseAdmin) throw new Error("Supabase admin not configured");
+
+    // 1. Upload File
+    const fileExt = file.originalname.split(".").pop();
+    const fileName = `payment-proofs/${orderId}/${paymentId}_${Date.now()}.${fileExt}`;
+    const bucketName = "user-content";
+
+    const { error } = await supabaseAdmin.storage
+      .from(bucketName)
+      .upload(fileName, file.buffer, { contentType: file.mimetype });
+
+    if (error) throw new Error(`Upload failed: ${error.message}`);
+
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage.from(bucketName).getPublicUrl(fileName);
+
+    // 2. Insert Proof Record
+    const proof = await sql`
+        INSERT INTO public.manual_payment_proofs (order_id, payment_id, proof_url, note, status)
+        VALUES (${orderId}, ${paymentId}, ${publicUrl}, ${note}, 'pending')
+        RETURNING *
+    `;
+
+    // 3. Update Payment Status to 'waiting_verification' (optional, or keep pending)
+    // Let's keep it 'pending' or maybe 'waiting_confirmation' if enum allows.
+    // Assuming 'pending' is fine.
+
+    // 4. Fetch Product Group Links
+    const productLinks = await sql`
+        SELECT pg.join_link, p.name
+        FROM public.order_items oi
+        JOIN public.product_groups pg ON oi.product_id = pg.product_id
+        JOIN public.products p ON p.id = pg.product_id
+        WHERE oi.order_id = ${orderId}
+        AND pg.is_active = true
+    `;
+
+    let groupLink = null;
+    let groupLinks = [];
+
+    if (productLinks.length > 0) {
+      // Collect all links
+      groupLinks = productLinks.map((pl) => ({
+        product: pl.name,
+        link: pl.join_link,
+      }));
+
+      // Use the first one for the main order_groups (legacy support)
+      groupLink = productLinks[0].join_link;
+
+      // Upsert into order_groups
+      await sql`
+            INSERT INTO public.order_groups (order_id, join_link, is_active)
+            VALUES (${orderId}, ${groupLink}, true)
+            ON CONFLICT (order_id) 
+            DO UPDATE SET join_link = ${groupLink}, is_active = true
+        `;
+    }
+
+    return {
+      ...proof[0],
+      groupLink: groupLink,
+      groupLinks: groupLinks,
+    };
+  }
+
+  async getOrderGroupLink(orderId) {
+    const group =
+      await sql`SELECT * FROM public.order_groups WHERE order_id = ${orderId} AND is_active = true`;
+    return group.length > 0 ? group[0].join_link : null;
+  }
+
   async getPaymentByOrder(orderId) {
     return await sql`SELECT * FROM public.payments WHERE order_id = ${orderId}`;
   }
