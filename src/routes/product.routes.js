@@ -27,6 +27,8 @@ router.get("/:id", optionalAuth, productController.getProductById);
 router.get("/:id/sizes", sizeController.getSizesByProduct);
 router.get("/:id/size-guide", sizeGuideController.getSizeGuideByProduct); // Single/List
 router.get("/:id/specs", productSpecController.getSpecsByProduct);
+router.get("/:id/reviews", reviewController.getProductReviews);
+router.get("/:id/rating", optionalAuth, reviewController.getProductRating);
 
 // Protected Routes
 router.use(authMiddleware);
@@ -71,8 +73,6 @@ router.post(
 );
 
 // Review Management
-router.get("/:id/reviews", reviewController.getProductReviews);
-router.get("/:id/rating", reviewController.getProductRating);
 router.post(
   "/:id/reviews",
   upload.array("images", 5), // Max 5 images
