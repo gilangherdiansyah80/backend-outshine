@@ -65,7 +65,10 @@ class ProductService {
       createdAt: product.created_at,
       isNew:
         product.created_at >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      isTrending: Number(product.average_rating || 0) >= 4.5,
+      isTrending:
+        (Number(product.average_rating || 0) >= 4.0 &&
+          Number(product.total_reviews || 0) >= 2) ||
+        Number(product.total_reviews || 0) >= 10,
     };
   }
 
@@ -116,7 +119,11 @@ class ProductService {
         (${categoryId ? sql`p.category_id = ${categoryId}` : sql`1=1`})
         AND (${search ? sql`p.name ILIKE ${"%" + search + "%"}` : sql`1=1`})
         AND (${isNew === "true" ? sql`p.created_at >= NOW() - INTERVAL '30 days'` : sql`1=1`})
-        AND (${isTrending === "true" ? sql`COALESCE(prs.average_rating, 0) >= 4.5` : sql`1=1`})
+        AND (${
+          isTrending === "true"
+            ? sql`((COALESCE(prs.average_rating, 0) >= 4.0 AND COALESCE(prs.total_reviews, 0) >= 2) OR COALESCE(prs.total_reviews, 0) >= 10)`
+            : sql`1=1`
+        })
       ORDER BY p.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
