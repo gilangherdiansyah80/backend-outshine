@@ -215,7 +215,12 @@ class OrderService {
     `;
 
     const payment = await sql`
-        SELECT * FROM public.payments WHERE order_id = ${orderId} ORDER BY created_at DESC LIMIT 1
+        SELECT p.*, pm.name as payment_method_name
+        FROM public.payments p
+        LEFT JOIN public.payment_methods pm ON p.bank = pm.code
+        WHERE p.order_id = ${orderId} 
+        ORDER BY p.created_at DESC 
+        LIMIT 1
     `;
 
     const order = toCamelCase(orders[0]);
@@ -226,6 +231,10 @@ class OrderService {
       formattedDiscountedPrice: formatCurrency(Number(item.price)),
     }));
     const latestPayment = payment.length > 0 ? toCamelCase(payment[0]) : null;
+
+    if (latestPayment && latestPayment.paymentMethodName) {
+      latestPayment.bank = latestPayment.paymentMethodName;
+    }
 
     return {
       ...order,
