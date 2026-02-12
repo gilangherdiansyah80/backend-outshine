@@ -183,13 +183,20 @@ class OrderService {
 
       // Format amounts for each item if they exist
       if (camelOrder.items) {
-        camelOrder.items = camelOrder.items.map((item) => ({
-          ...item,
-          formattedOriginalPrice: formatCurrency(Number(item.originalPrice)),
-          formattedDiscountedPrice: formatCurrency(
-            Number(item.discountedPrice),
-          ),
-        }));
+        camelOrder.items = camelOrder.items.map((item) => {
+          const originalPrice = Number(item.originalPrice);
+          const discountedPrice = Number(item.discountedPrice);
+          const hasDiscount = discountedPrice < originalPrice;
+
+          return {
+            ...item,
+            discountedPrice: hasDiscount ? discountedPrice : 0,
+            formattedOriginalPrice: formatCurrency(originalPrice),
+            formattedDiscountedPrice: hasDiscount
+              ? formatCurrency(discountedPrice)
+              : formatCurrency(0),
+          };
+        });
       }
 
       return camelOrder;
@@ -224,12 +231,20 @@ class OrderService {
     `;
 
     const order = toCamelCase(orders[0]);
-    const camelItems = toCamelCase(items).map((item) => ({
-      ...item,
-      discountedPrice: Number(item.price), // Renaming key for clarity in response
-      formattedOriginalPrice: formatCurrency(Number(item.originalPrice)),
-      formattedDiscountedPrice: formatCurrency(Number(item.price)),
-    }));
+    const camelItems = toCamelCase(items).map((item) => {
+      const originalPrice = Number(item.originalPrice);
+      const paidPrice = Number(item.price);
+      const hasDiscount = paidPrice < originalPrice;
+
+      return {
+        ...item,
+        discountedPrice: hasDiscount ? paidPrice : 0,
+        formattedOriginalPrice: formatCurrency(originalPrice),
+        formattedDiscountedPrice: hasDiscount
+          ? formatCurrency(paidPrice)
+          : formatCurrency(0),
+      };
+    });
     const latestPayment = payment.length > 0 ? toCamelCase(payment[0]) : null;
 
     if (latestPayment && latestPayment.paymentMethodName) {
