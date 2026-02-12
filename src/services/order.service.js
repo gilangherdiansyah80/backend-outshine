@@ -207,6 +207,14 @@ class OrderService {
     const orders = await sql`SELECT * FROM public.orders WHERE id = ${orderId}`;
     if (orders.length === 0) throw new Error("Order not found");
 
+    const order = toCamelCase(orders[0]);
+
+    // Fetch Address
+    const addresses = await sql`
+      SELECT * FROM public.user_addresses WHERE id = ${order.addressId}
+    `;
+    const address = addresses.length > 0 ? toCamelCase(addresses[0]) : null;
+
     const items = await sql`
       SELECT oi.*, p.name as product_name, s.name as size_name, p.price as original_price,
       (
@@ -230,7 +238,6 @@ class OrderService {
         LIMIT 1
     `;
 
-    const order = toCamelCase(orders[0]);
     const camelItems = toCamelCase(items).map((item) => {
       const originalPrice = Number(item.originalPrice);
       const paidPrice = Number(item.price);
@@ -253,6 +260,7 @@ class OrderService {
 
     return {
       ...order,
+      address,
       items: camelItems,
       latestPayment,
       formattedTotalPrice: formatCurrency(Number(order.totalPrice)),
