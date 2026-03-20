@@ -54,8 +54,6 @@ class DashboardService {
           year ? sql` AND EXTRACT(YEAR FROM created_at) = ${year}` : sql``
         }${
           month ? sql` AND EXTRACT(MONTH FROM created_at) = ${month}` : sql``
-        }${
-          !year && !month ? sql` AND created_at >= NOW() - INTERVAL '30 days'` : sql``
         }
       GROUP BY period
       ORDER BY period ASC

@@ -18,11 +18,14 @@ class DashboardController {
   async getOrderChartStats(req, res, next) {
     try {
       const { status, month, year } = req.query;
-      const stats = await dashboardService.getOrderChartStats({
-        status,
-        month: month ? parseInt(month) : null,
-        year: year ? parseInt(year) : null,
-      });
+      
+      const filters = {
+        status: (status && status !== "" && status !== "null" && status !== "All Status") ? status : null,
+        month: (month && month !== "" && month !== "null") ? parseInt(month) : null,
+        year: (year && year !== "" && year !== "null") ? parseInt(year) : null,
+      };
+
+      const stats = await dashboardService.getOrderChartStats(filters);
 
       res.status(200).json({
         success: true,
