@@ -14,6 +14,18 @@ class DiscountService {
     return discounts;
   }
 
+  async getAllDiscounts() {
+    const discounts = await sql`
+      SELECT 
+        pd.*,
+        p.name as product_name
+      FROM public.product_discounts pd
+      JOIN public.products p ON pd.product_id = p.id
+      ORDER BY pd.is_active DESC, pd.start_date DESC
+    `;
+    return discounts;
+  }
+
   async getActiveDiscountByProductId(productId) {
     const discounts = await sql`
         SELECT * FROM public.product_discounts

@@ -44,6 +44,7 @@ const authMiddleware = require("../middlewares/auth.middleware");
 
 // router for /discounts
 router.use(authMiddleware);
+router.get("/", discountController.getAllDiscounts);
 router.put("/:id", discountController.updateDiscount);
 router.delete("/:id", discountController.deleteDiscount);
 

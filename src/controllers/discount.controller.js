@@ -11,6 +11,15 @@ const getDiscountsByProduct = async (req, res) => {
   }
 };
 
+const getAllDiscounts = async (req, res) => {
+  try {
+    const discounts = await discountService.getAllDiscounts();
+    return successResponse(res, discounts, "All discounts retrieved successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 const createDiscount = async (req, res) => {
   try {
     const { id } = req.params; // Product ID
@@ -66,6 +75,7 @@ const deleteDiscount = async (req, res) => {
 
 module.exports = {
   getDiscountsByProduct,
+  getAllDiscounts,
   createDiscount,
   updateDiscount,
   deleteDiscount,
