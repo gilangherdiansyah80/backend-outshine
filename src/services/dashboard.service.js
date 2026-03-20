@@ -39,6 +39,34 @@ class DashboardService {
       }
     ];
   }
+  
+  async getOrderChartStats(filters = {}) {
+    const { status, month, year } = filters;
+
+    const stats = await sql`
+      SELECT 
+        ${month && year ? sql`DATE_TRUNC('day', created_at)` : sql`DATE_TRUNC('month', created_at)`} as period,
+        SUM(total_price) as total_revenue,
+        COUNT(*) as order_count
+      FROM public.orders
+      WHERE 
+        (${status ? sql`status = ${status}` : sql`1=1`})${
+          year ? sql` AND EXTRACT(YEAR FROM created_at) = ${year}` : sql``
+        }${
+          month ? sql` AND EXTRACT(MONTH FROM created_at) = ${month}` : sql``
+        }${
+          !year && !month ? sql` AND created_at >= NOW() - INTERVAL '30 days'` : sql``
+        }
+      GROUP BY period
+      ORDER BY period ASC
+    `;
+
+    return stats.map((s) => ({
+      period: s.period,
+      totalRevenue: parseFloat(s.total_revenue) || 0,
+      orderCount: parseInt(s.order_count) || 0,
+    }));
+  }
 }
 
 module.exports = new DashboardService();

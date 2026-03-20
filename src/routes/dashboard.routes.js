@@ -6,5 +6,6 @@ const dashboardController = require("../controllers/dashboard.controller");
 // GET /api/v1/dashboard/stats
 // For now, let's keep it public, but eventually, it should be admin-only
 router.get("/stats", dashboardController.getStats);
+router.get("/order-charts", dashboardController.getOrderChartStats);
 
 module.exports = router;
