@@ -18,6 +18,7 @@ const cartRoutes = require("./cart.routes");
 const orderRoutes = require("./order.routes");
 const paymentRoutes = require("./payment.routes");
 const heroSectionRoutes = require("./hero-section.routes");
+const dashboardRoutes = require("./dashboard.routes");
 
 // Health check routes
 router.use("/health", healthRoutes);
@@ -51,5 +52,6 @@ router.use("/cart", cartRoutes);
 router.use("/orders", orderRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/hero-sections", heroSectionRoutes);
+router.use("/dashboard", dashboardRoutes);
 
 module.exports = router;
