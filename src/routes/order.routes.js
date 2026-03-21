@@ -15,6 +15,7 @@ router.delete("/:id", orderController.deleteOrder);
 
 // Admin Routes (should separate middleware for admin check really)
 router.get("/admin/all", orderController.getAllOrders); // Adjusted path to verify
+router.get("/admin/:id", orderController.getAdminOrderById);
 router.put("/admin/:id/status", orderController.updateOrderStatus);
 
 module.exports = router;

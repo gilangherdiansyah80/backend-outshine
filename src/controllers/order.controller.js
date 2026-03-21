@@ -100,6 +100,17 @@ const getAllOrders = async (req, res) => {
   }
 };
 
+const getAdminOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // We reuse getOrderById from service because it already returns exhaustive details
+    const order = await orderService.getOrderById(id);
+    return successResponse(res, order, "Admin order detail retrieved");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -129,6 +140,7 @@ module.exports = {
   getUserOrders,
   getOrderById,
   getAllOrders,
+  getAdminOrderById,
   updateOrderStatus,
   deleteOrder,
 };

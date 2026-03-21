@@ -269,24 +269,53 @@ class OrderService {
     };
   }
 
-  async getAllOrders(userId) {
+  async getAllOrders() {
     const orders = await sql`
-        SELECT o.*, u.email as user_email
-        FROM public.orders o
-        JOIN public.users u ON o.user_id = u.id
-        ORDER BY o.created_at DESC
+      SELECT o.id, o.status, o.total_price, o.created_at, o.user_id,
+        u.email as user_email, p.full_name as user_name,
+        COALESCE((SELECT sum(quantity) FROM public.order_items WHERE order_id = o.id), 0) as total_products,
+        (
+          SELECT json_agg(json_build_object(
+            'productName', pr.name,
+            'sizeName', s.name,
+            'quantity', oi.quantity,
+            'originalPrice', pr.price,
+            'discountedPrice', oi.price,
+            'productImage', (
+              SELECT image_url FROM public.product_images pi 
+              WHERE pi.product_id = pr.id AND pi.is_primary = true LIMIT 1
+            )
+          ))
+          FROM public.order_items oi
+          JOIN public.products pr ON oi.product_id = pr.id
+          JOIN public.sizes s ON oi.size_id = s.id
+          WHERE oi.order_id = o.id
+        ) as items
+      FROM public.orders o
+      JOIN public.users u ON o.user_id = u.id
+      LEFT JOIN public.profile_users p ON u.id = p.user_id
+      ORDER BY o.created_at DESC
     `;
+
     return orders.map((order) => {
       const camelOrder = toCamelCase(order);
-      camelOrder.formattedTotalPrice = formatCurrency(
-        Number(camelOrder.totalPrice),
-      );
-      camelOrder.formattedPaidAmount = formatCurrency(
-        Number(camelOrder.paidAmount),
-      );
-      camelOrder.formattedRemainingAmount = formatCurrency(
-        Number(camelOrder.remainingAmount),
-      );
+      camelOrder.formattedTotalPrice = formatCurrency(Number(camelOrder.totalPrice));
+
+      if (camelOrder.items) {
+        camelOrder.items = camelOrder.items.map((item) => {
+           const original = Number(item.originalPrice);
+           const discounted = Number(item.discountedPrice);
+           const hasDiscount = discounted < original;
+           const finalPrice = hasDiscount ? discounted : original;
+           return {
+              productName: item.productName,
+              sizeName: item.sizeName,
+              quantity: item.quantity,
+              productImage: item.productImage,
+              formattedPrice: formatCurrency(finalPrice)
+           }
+        });
+      }
       return camelOrder;
     });
   }
