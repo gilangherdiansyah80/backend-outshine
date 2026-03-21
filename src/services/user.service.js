@@ -108,6 +108,27 @@ class UserService {
 
     return { avatarUrl: publicUrl };
   }
+
+  async getAllCustomers() {
+    const customers = await sql`
+      SELECT 
+        u.id, 
+        u.email, 
+        u.is_active,
+        r.name as role_name,
+        p.full_name, 
+        p.avatar_url, 
+        p.phone,
+        u.created_at
+      FROM public.users u
+      JOIN public.roles r ON u.role_id = r.id
+      LEFT JOIN public.profile_users p ON u.id = p.user_id
+      WHERE r.name = 'customer'
+      ORDER BY u.created_at DESC
+    `;
+
+    return customers;
+  }
 }
 
 module.exports = new UserService();

@@ -24,4 +24,7 @@ router.get("/me", userController.getProfile);
 router.put("/me", userController.updateProfile);
 router.put("/me/avatar", upload.single("avatar"), userController.updateAvatar);
 
+// Admin Routes
+router.get("/customers", userController.getAllCustomers);
+
 module.exports = router;

@@ -46,8 +46,18 @@ const updateAvatar = async (req, res) => {
   }
 };
 
+const getAllCustomers = async (req, res) => {
+  try {
+    const customers = await userService.getAllCustomers();
+    return successResponse(res, customers, "Customers retrieved successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   updateAvatar,
+  getAllCustomers,
 };
