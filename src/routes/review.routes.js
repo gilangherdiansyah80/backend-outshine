@@ -10,6 +10,10 @@ const upload = require("../middlewares/upload.middleware");
 // DELETE /reviews/:id
 
 router.use(authMiddleware);
+
+// Admin: Get all reviews from all products
+router.get("/all", reviewController.getAllReviews);
+
 router.delete("/:id", reviewController.deleteReview);
 router.put(
   "/:id",

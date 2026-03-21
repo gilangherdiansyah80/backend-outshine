@@ -175,6 +175,35 @@ class ReviewService {
         DO UPDATE SET average_rating = ${average}, total_reviews = ${total}
       `;
   }
+
+  async getAllReviews() {
+    const reviews = await sql`
+      SELECT 
+        r.*,
+        pr.name as product_name,
+        (
+          SELECT image_url FROM public.product_images pi 
+          WHERE pi.product_id = pr.id AND pi.is_primary = true LIMIT 1
+        ) as product_image,
+        u.email as user_email,
+        p.full_name as user_name,
+        p.avatar_url as user_avatar,
+        COALESCE(
+          (
+            SELECT json_agg(ri.image_url)
+            FROM public.product_review_images ri
+            WHERE ri.review_id = r.id
+          ),
+          '[]'::json
+        ) as images
+      FROM public.product_reviews r
+      JOIN public.products pr ON r.product_id = pr.id
+      JOIN public.users u ON r.user_id = u.id
+      LEFT JOIN public.profile_users p ON u.id = p.user_id
+      ORDER BY r.created_at DESC
+    `;
+    return reviews;
+  }
 }
 
 module.exports = new ReviewService();

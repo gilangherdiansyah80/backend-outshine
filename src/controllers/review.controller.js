@@ -74,11 +74,20 @@ const updateReview = async (req, res) => {
   }
 };
 
+const getAllReviews = async (req, res) => {
+  try {
+    const reviews = await reviewService.getAllReviews();
+    return successResponse(res, reviews, "All reviews retrieved successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   getProductReviews,
   getProductRating,
   createReview,
-  createReview,
   deleteReview,
   updateReview,
+  getAllReviews,
 };
