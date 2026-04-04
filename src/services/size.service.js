@@ -51,6 +51,34 @@ class SizeService {
     }
     return updated[0];
   }
+
+  async updateSize(id, name) {
+    const updated = await sql`
+      UPDATE public.sizes 
+      SET name = ${name} 
+      WHERE id = ${id} 
+      RETURNING *
+    `;
+    if (updated.length === 0) {
+      throw new Error("Size not found");
+    }
+    return updated[0];
+  }
+
+  async deleteSize(id) {
+    // Check if being used by products first?
+    // Depending on DB constraints, this might fail automatically.
+    // Assuming we want a clean delete.
+    const deleted = await sql`
+      DELETE FROM public.sizes 
+      WHERE id = ${id} 
+      RETURNING *
+    `;
+    if (deleted.length === 0) {
+      throw new Error("Size not found");
+    }
+    return true;
+  }
 }
 
 module.exports = new SizeService();

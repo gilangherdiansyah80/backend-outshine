@@ -69,10 +69,35 @@ const updateProductSize = async (req, res) => {
   }
 };
 
+const updateSize = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name) return errorResponse(res, "Name is required", 400);
+
+    const updated = await sizeService.updateSize(id, name);
+    return successResponse(res, updated, "Size updated successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+const deleteSize = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await sizeService.deleteSize(id);
+    return successResponse(res, null, "Size deleted successfully");
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
 module.exports = {
   getAllSizes,
   createSize,
   getSizesByProduct,
   addProductSize,
   updateProductSize,
+  updateSize,
+  deleteSize,
 };

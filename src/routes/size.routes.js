@@ -8,5 +8,7 @@ router.get("/", sizeController.getAllSizes);
 
 // Protected routes
 router.post("/", authMiddleware, sizeController.createSize);
+router.put("/:id", authMiddleware, sizeController.updateSize);
+router.delete("/:id", authMiddleware, sizeController.deleteSize);
 
 module.exports = router;
