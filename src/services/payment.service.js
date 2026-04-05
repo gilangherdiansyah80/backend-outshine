@@ -1,5 +1,6 @@
 const { sql, getSupabaseAdmin } = require("../config/database");
 const midtransClient = require("midtrans-client");
+const orderService = require("./order.service");
 
 // Initialize CoreApi
 const coreApi = new midtransClient.CoreApi({
@@ -355,7 +356,11 @@ class PaymentService {
             SET status = 'rejected', verified_at = NOW() 
             WHERE id = ${proofId}
         `;
-      return { status: "rejected", message: "Payment rejected" };
+        
+      // Update Order to Cancelled and restore stock
+      await orderService.cancelOrder(proof.order_id);
+
+      return { status: "rejected", message: "Payment rejected and order cancelled" };
     } else {
       throw new Error("Invalid status. Must be 'approved' or 'rejected'");
     }

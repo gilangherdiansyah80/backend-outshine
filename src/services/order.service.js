@@ -338,6 +338,29 @@ class OrderService {
     return updated[0];
   }
 
+  async cancelOrder(orderId) {
+    // 1. Get current status and items
+    const orders = await sql`SELECT status FROM public.orders WHERE id = ${orderId}`;
+    if (orders.length === 0) throw new Error("Order not found");
+    if (orders[0].status === "cancelled") return orders[0];
+
+    // 2. Restore Stocks
+    const items = await sql`SELECT product_id, size_id, quantity FROM public.order_items WHERE order_id = ${orderId}`;
+    for (const item of items) {
+      await sql`
+        UPDATE public.product_sizes 
+        SET stock = stock + ${item.quantity}
+        WHERE product_id = ${item.product_id} AND size_id = ${item.size_id}
+      `;
+    }
+
+    // 3. Update Order Status
+    const updated = await sql`
+        UPDATE public.orders SET status = 'cancelled' WHERE id = ${orderId} RETURNING *
+    `;
+    return updated[0];
+  }
+
   async deleteOrder(userId, orderId) {
     // Check ownership or admin role (handled by controller usually, but safe to check ownership here if not admin)
     // Assuming userId passed is the owner. If admin, maybe pass null or handle in controller.
