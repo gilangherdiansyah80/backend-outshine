@@ -259,7 +259,7 @@ class OrderService {
     const proofs = await sql`
       SELECT proof_url FROM public.manual_payment_proofs 
       WHERE order_id = ${orderId} 
-      ORDER BY created_at DESC 
+      ORDER BY id DESC 
       LIMIT 1
     `;
     const paymentProof = proofs.length > 0 ? proofs[0].proof_url : null;
