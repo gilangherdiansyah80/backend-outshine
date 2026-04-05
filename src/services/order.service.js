@@ -230,7 +230,8 @@ class OrderService {
     `;
 
     const payment = await sql`
-        SELECT p.*, pm.name as payment_method_name
+        SELECT p.*, pm.name as payment_method_name,
+        (SELECT proof_url FROM public.manual_payment_proofs WHERE payment_id = p.id LIMIT 1) as proof_url
         FROM public.payments p
         LEFT JOIN public.payment_methods pm ON p.bank = pm.code
         WHERE p.order_id = ${orderId} 
@@ -274,6 +275,13 @@ class OrderService {
       SELECT o.id, o.status, o.total_price, o.created_at, o.user_id,
         u.email as user_email, p.full_name as user_name,
         COALESCE((SELECT sum(quantity) FROM public.order_items WHERE order_id = o.id), 0) as total_products,
+        (
+          SELECT proof_url 
+          FROM public.manual_payment_proofs 
+          WHERE order_id = o.id 
+          ORDER BY created_at DESC 
+          LIMIT 1
+        ) as payment_proof,
         (
           SELECT json_agg(json_build_object(
             'productName', pr.name,
