@@ -254,6 +254,15 @@ class OrderService {
       };
     });
     const latestPayment = payment.length > 0 ? toCamelCase(payment[0]) : null;
+    
+    // Fetch absolute latest proof for this order (top level)
+    const proofs = await sql`
+      SELECT proof_url FROM public.manual_payment_proofs 
+      WHERE order_id = ${orderId} 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `;
+    const paymentProof = proofs.length > 0 ? proofs[0].proof_url : null;
 
     if (latestPayment && latestPayment.paymentMethodName) {
       latestPayment.bank = latestPayment.paymentMethodName;
@@ -261,6 +270,7 @@ class OrderService {
 
     return {
       ...order,
+      paymentProof,
       address,
       items: camelItems,
       latestPayment,
@@ -275,13 +285,6 @@ class OrderService {
       SELECT o.id, o.status, o.total_price, o.created_at, o.user_id,
         u.email as user_email, p.full_name as user_name,
         COALESCE((SELECT sum(quantity) FROM public.order_items WHERE order_id = o.id), 0) as total_products,
-        (
-          SELECT proof_url 
-          FROM public.manual_payment_proofs 
-          WHERE order_id = o.id 
-          ORDER BY created_at DESC 
-          LIMIT 1
-        ) as payment_proof,
         (
           SELECT json_agg(json_build_object(
             'productName', pr.name,
