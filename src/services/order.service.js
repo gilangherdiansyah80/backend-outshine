@@ -231,7 +231,8 @@ class OrderService {
 
     const payment = await sql`
         SELECT p.*, pm.name as payment_method_name,
-        (SELECT proof_url FROM public.manual_payment_proofs WHERE payment_id = p.id LIMIT 1) as proof_url
+        (SELECT proof_url FROM public.manual_payment_proofs WHERE payment_id = p.id LIMIT 1) as proof_url,
+        (SELECT id FROM public.manual_payment_proofs WHERE payment_id = p.id LIMIT 1) as proof_id
         FROM public.payments p
         LEFT JOIN public.payment_methods pm ON p.bank = pm.code
         WHERE p.order_id = ${orderId} 
@@ -257,12 +258,13 @@ class OrderService {
     
     // Fetch absolute latest proof for this order (top level)
     const proofs = await sql`
-      SELECT proof_url FROM public.manual_payment_proofs 
+      SELECT id, proof_url FROM public.manual_payment_proofs 
       WHERE order_id = ${orderId} 
       ORDER BY id DESC 
       LIMIT 1
     `;
     const paymentProof = proofs.length > 0 ? proofs[0].proof_url : null;
+    const paymentProofId = proofs.length > 0 ? proofs[0].id : null;
 
     if (latestPayment && latestPayment.paymentMethodName) {
       latestPayment.bank = latestPayment.paymentMethodName;
@@ -271,6 +273,7 @@ class OrderService {
     return {
       ...order,
       paymentProof,
+      paymentProofId,
       address,
       items: camelItems,
       latestPayment,
