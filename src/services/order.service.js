@@ -335,6 +335,29 @@ class OrderService {
   }
 
   async updateOrderStatus(orderId, status) {
+    // 1. Handle Cancellation Logic
+    if (status === "cancelled") {
+      return await this.cancelOrder(orderId);
+    }
+
+    // 2. Handle Processing Logic (Auto-approve payments)
+    if (status === "processing") {
+      // Mark all pending payments for this order as success
+      await sql`
+        UPDATE public.payments 
+        SET status = 'success', transaction_status = 'settlement' 
+        WHERE order_id = ${orderId} AND status = 'pending'
+      `;
+      
+      // Mark all pending manual proofs for this order as approved
+      await sql`
+        UPDATE public.manual_payment_proofs 
+        SET status = 'approved', verified_at = NOW() 
+        WHERE order_id = ${orderId} AND status = 'pending'
+      `;
+    }
+
+    // 3. Update Order Status
     const updated = await sql`
         UPDATE public.orders SET status = ${status} WHERE id = ${orderId} RETURNING *
      `;
